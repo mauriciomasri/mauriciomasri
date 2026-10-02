@@ -24,16 +24,16 @@ body{margin:0;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 :root{
   --bg:#eef1f4; --panel:#ffffff; --ink:#16202b; --muted:#5b6876; --line:#d3dae2;
   --accent:#1f4e79; --accent-ink:#ffffff; --plan:#e3e8ee;
-  --rojo:#d93025; --amarillo:#e8a800; --amarillo-ink:#8a6400; --verde:#1e9e48;
+  --rojo:#d93025; --amarillo:#e8a800; --amarillo-ink:#8a6400; --azul:#1565c0; --verde:#1e9e48;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-label:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#11161c; --panel:#1a222b; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
-  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; color-scheme:dark}}
+  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; --azul:#4f8fe0; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#11161c; --panel:#1a222b; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
-  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; color-scheme:dark}
+  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; --azul:#4f8fe0; color-scheme:dark}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;overflow:hidden}
@@ -49,7 +49,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .counts{display:flex;gap:6px;font-family:var(--f-label);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
 .counts span{display:flex;align-items:center;gap:4px}
 .dot{width:12px;height:12px;border-radius:50%;border:2.5px solid currentColor;display:inline-block}
-.c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-verde{color:var(--verde)}
+.c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-azul{color:var(--azul)}.c-verde{color:var(--verde)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:600}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn:disabled{opacity:.45;cursor:default}
@@ -87,7 +87,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .tool{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid transparent;border-radius:12px;background:var(--bg);padding:7px 2px;font-family:var(--f-label);font-weight:600;font-size:15px;letter-spacing:.02em}
 .tool .ring{width:24px;height:24px;border-radius:50%;border:4px solid currentColor}
 .tool[aria-pressed="true"]{border-color:currentColor;background:var(--panel)}
-.tool.t-rojo{color:var(--rojo)}.tool.t-amarillo{color:var(--amarillo-ink)}.tool.t-amarillo .ring{border-color:var(--amarillo)}.tool.t-verde{color:var(--verde)}
+.tool.t-rojo{color:var(--rojo)}.tool.t-amarillo{color:var(--amarillo-ink)}.tool.t-amarillo .ring{border-color:var(--amarillo)}.tool.t-azul{color:var(--azul)}.tool.t-verde{color:var(--verde)}
 .tool.t-mano,.tool.t-borrar,.tool.t-texto{color:var(--muted);flex:.85}
 .tool .ico{font-size:20px;line-height:24px}
 .tool[aria-pressed="true"].t-mano,.tool[aria-pressed="true"].t-borrar,.tool[aria-pressed="true"].t-texto{color:var(--ink)}
@@ -109,7 +109,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .note{font-size:13px;color:var(--muted);line-height:1.45}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
-@media (max-width:420px){.counts{font-size:14px;gap:4px}.top{gap:8px;padding-inline:12px}.tool{font-size:13px;overflow:hidden}.top .btn{padding:8px 10px}}
+@media (max-width:420px){.counts{font-size:13px;gap:3px}.counts .dot{width:10px;height:10px;border-width:2px}.top{gap:6px;padding-inline:10px}.tray{gap:4px;padding-inline:6px}.tool{font-size:12px;overflow:hidden;padding-inline:0;letter-spacing:0}.tool .ring{width:20px;height:20px;border-width:3.5px}.top .btn{padding:8px 10px}}
 .top{padding-top:calc(8px + env(safe-area-inset-top,0px))}
 .install{border:1px dashed var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.45}
 .install b{font-family:var(--f-label);font-size:16px}
@@ -119,7 +119,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .foto button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:24px;padding:0}
 .addfoto{width:76px;height:76px;border-radius:8px;border:1.5px dashed var(--line);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--muted);gap:2px}
 .addfoto span{font-size:22px;line-height:1}
-.quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#1072b8;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
+.quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#2b3440;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
 .sheet .stack{display:flex;flex-direction:column;gap:10px}
 .sheet .stack .btn{padding:14px;font-size:16px}
 </style>
@@ -135,6 +135,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="counts" id="counts" hidden>
       <span class="c-rojo"><i class="dot"></i><b id="nR">0</b></span>
       <span class="c-amarillo"><i class="dot"></i><b id="nA">0</b></span>
+      <span class="c-azul"><i class="dot"></i><b id="nZ">0</b></span>
       <span class="c-verde"><i class="dot"></i><b id="nV">0</b></span>
     </div>
     <button class="btn primary" id="saveBtn" type="button" hidden>Enviar</button>
@@ -147,7 +148,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <h1>Marca el avance sobre el plano</h1>
         <ol class="steps">
           <li style="display:contents"><b>1</b><span>Abre el PDF del plano que te mandaron.</span></li>
-          <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
+          <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Enviar</strong> y manda el PDF marcado a Mauricio.</span></li>
         </ol>
         <p>Para editar un recorrido que ya enviaste, usa <b>Cargar recorrido anterior</b>: regresa el plano con sus círculos, textos y fotos.</p>
@@ -185,7 +186,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <nav class="tray" id="tray" hidden>
     <button class="tool t-rojo" data-tool="rojo" aria-pressed="true" type="button"><i class="ring"></i>Falta tubo</button>
     <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
-    <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Listo</button>
+    <button class="tool t-azul" data-tool="azul" aria-pressed="false" type="button"><i class="ring"></i>Cableado</button>
+    <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Terminado</button>
     <button class="tool t-texto" data-tool="texto" aria-pressed="false" type="button"><span class="ico" style="font-family:var(--f-label);font-weight:700">Aa</span>Texto</button>
     <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
     <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
@@ -200,14 +202,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 14;
+  const APP_VERSION = 15;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
   const ST = {
     rojo:     { name: "Falta tubería",     tool: "Falta tubo", rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
     amarillo: { name: "Detalle pendiente", tool: "Detalle",    rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
-    verde:    { name: "Listo",             tool: "Listo",      rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+    azul:     { name: "Tubería y cableado OK", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
+    verde:    { name: "Terminado con equipo",  tool: "Terminado", rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
   };
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
   const RESP = ["Automa", "Obra"];
@@ -234,7 +237,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function label(m) {
     if (m.st === "rojo") return "Falta tubería";
-    if (m.st === "verde") return "OK";
+    if (m.st === "azul") return "Cableado OK";
+    if (m.st === "verde") return "Terminado";
     return m.mot && m.mot !== "Otro" ? m.mot : (m.nota || "Detalle");
   }
 
@@ -247,7 +251,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   let draftT = 0;
   function saveDraft() {
     clearTimeout(draftT);
-    draftT = setTimeout(() => DB.put({ bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }), 400);
+    draftT = setTimeout(() => DB.put({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }), 400);
   }
 
   /* ---------- loading ---------- */
@@ -264,7 +268,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         // (sin portada, resumen ni hojas de fotos).
         const j = JSON.parse(new TextDecoder().decode(att["recorrido.json"].content));
         base = att["original.pdf"].content;
-        marks = j.marks || []; meta = j.meta || null;
+        marks = migrate(j.marks || [], j.v); meta = j.meta || null;
       } else if (wantPrev || isExport) {
         probe.destroy(); $("busy").hidden = true;
         sheet(`
@@ -282,6 +286,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       $("busy").hidden = true;
       toast("No se pudo abrir ese archivo. Revisa que sea un PDF.");
     }
+  }
+  // v1 tenía 3 colores: su verde (tubería y cableado OK) ahora es azul.
+  function migrate(marks, v) {
+    if ((v || 1) < 2) marks.forEach(m => { if (m.st === "verde") m.st = "azul"; });
+    return marks;
   }
   function obraFromName(n) {
     if (!n) return "Obra";
@@ -347,17 +356,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n} · ${esc(label(m))}</text>${m.fotos && m.fotos.length ? camBadge(x, y - r - Math.max(4, r * 0.3) - 1.5, Math.max(4, r * 0.3), m.fotos.length) : ""}</g>`);
     }
     $("ov").innerHTML = out.join("");
-    const c = { rojo: 0, amarillo: 0, verde: 0 };
+    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
     S.marks.forEach(m => { if (!isTxt(m)) c[m.st]++; });
-    $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nV").textContent = c.verde;
+    $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nZ").textContent = c.azul; $("nV").textContent = c.verde;
     $("undoBtn").disabled = !S.undo.length;
   }
   function camBadge(cx, cy, b, n) {
-    return `<g aria-label="${n} foto${n > 1 ? "s" : ""}"><circle cx="${cx}" cy="${cy}" r="${b}" fill="#1072b8" stroke="#fff" stroke-width="${b * 0.12}"/>` +
+    return `<g aria-label="${n} foto${n > 1 ? "s" : ""}"><circle cx="${cx}" cy="${cy}" r="${b}" fill="#2b3440" stroke="#fff" stroke-width="${b * 0.12}"/>` +
       `<rect x="${cx - b * 0.55}" y="${cy - b * 0.32}" width="${b * 1.1}" height="${b * 0.72}" rx="${b * 0.12}" fill="#fff"/>` +
       `<rect x="${cx - b * 0.2}" y="${cy - b * 0.48}" width="${b * 0.4}" height="${b * 0.2}" rx="${b * 0.05}" fill="#fff"/>` +
-      `<circle cx="${cx}" cy="${cy + b * 0.04}" r="${b * 0.22}" fill="#1072b8"/>` +
-      (n > 1 ? `<text x="${cx + b * 1.25}" y="${cy + b * 0.4}" text-anchor="start" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="${b * 0.95}" fill="#1072b8" stroke="#fff" stroke-width="${b * 0.25}" paint-order="stroke">${n}</text>` : "") + `</g>`;
+      `<circle cx="${cx}" cy="${cy + b * 0.04}" r="${b * 0.22}" fill="#2b3440"/>` +
+      (n > 1 ? `<text x="${cx + b * 1.25}" y="${cy + b * 0.4}" text-anchor="start" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="${b * 0.95}" fill="#2b3440" stroke="#fff" stroke-width="${b * 0.25}" paint-order="stroke">${n}</text>` : "") + `</g>`;
   }
   let quickT = 0;
   function offerPhoto(m) {
@@ -707,7 +716,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
         if (m.fotos && m.fotos.length) {
           const [bx, by] = v1.convertToPdfPoint(vx, vy - rpt * 1.35);
-          pg.drawCircle({ x: bx, y: by, size: rpt * 0.3, color: rgb(0.06, 0.45, 0.72), borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.05 });
+          pg.drawCircle({ x: bx, y: by, size: rpt * 0.3, color: rgb(0.17, 0.2, 0.25), borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.05 });
           pg.drawCircle({ x: bx, y: by, size: rpt * 0.13, borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.06 });
         }
       }
@@ -731,9 +740,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       return H - M - 54;
     };
     const circ = S.marks.filter(m => !isTxt(m)), notas = S.marks.filter(isTxt);
-    const cnt = { rojo: 0, amarillo: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
+    const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
     const total = circ.length || 1, pct = k => Math.round(cnt[k] * 100 / total);
-    const ORDER = ["verde", "amarillo", "rojo"];
+    const ORDER = ["verde", "azul", "amarillo", "rojo"];
 
     // Portada
     const cv = front();
@@ -750,24 +759,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const k of ORDER) { const w = bw * cnt[k] / total; if (w > 0) cv.drawRectangle({ x: xx, y: byy, width: w, height: 14, color: rgb(...ST[k].rgb) }); xx += w; }
     if (!circ.length) cv.drawRectangle({ x: bx, y: byy, width: bw, height: 14, color: LINE });
     ORDER.forEach((k, i) => {
-      const cx = bx + bw * (i + 0.5) / 3, c = ST[k];
+      const cx = bx + bw * (i + 0.5) / ORDER.length, c = ST[k];
       const n = String(cnt[k]); cv.drawText(n, { x: cx - font.widthOfTextAtSize(n, 30) / 2, y: 175, size: 30, font, color: rgb(...c.text) });
-      const l = safe(`${c.name}  ${pct(k)}%`); cv.drawText(l, { x: cx - fontR.widthOfTextAtSize(l, 10) / 2, y: 158, size: 10, font: fontR, color: GRAY });
+      const l = safe(c.name); cv.drawText(l, { x: cx - fontR.widthOfTextAtSize(l, 9.5) / 2, y: 158, size: 9.5, font: fontR, color: GRAY });
+      const pc = `${pct(k)}%`; cv.drawText(pc, { x: cx - font.widthOfTextAtSize(pc, 10) / 2, y: 145, size: 10, font, color: GRAY });
     });
 
     // Resumen y pendientes
     let sp = front(), y = header(sp, "Resumen del recorrido");
-    const tileW = (W - 2 * M - 24) / 3;
+    const tileW = (W - 2 * M - 12 * (ORDER.length - 1)) / ORDER.length;
     ORDER.forEach((k, i) => {
       const c = ST[k], tx = M + i * (tileW + 12);
       sp.drawRectangle({ x: tx, y: y - 52, width: tileW, height: 52, color: TINT });
       sp.drawRectangle({ x: tx, y: y - 52, width: 4, height: 52, color: rgb(...c.rgb) });
-      sp.drawText(String(cnt[k]), { x: tx + 16, y: y - 36, size: 24, font, color: rgb(...c.text) });
-      sp.drawText(safe(`${c.name}`), { x: tx + 60, y: y - 24, size: 11, font, color: INK });
-      sp.drawText(`${pct(k)}% de ${circ.length}`, { x: tx + 60, y: y - 39, size: 9, font: fontR, color: GRAY });
+      sp.drawText(String(cnt[k]), { x: tx + 14, y: y - 36, size: 24, font, color: rgb(...c.text) });
+      sp.drawText(fit(c.name, 10, font, tileW - 62), { x: tx + 54, y: y - 24, size: 10, font, color: INK });
+      sp.drawText(`${pct(k)}% de ${circ.length}`, { x: tx + 54, y: y - 39, size: 9, font: fontR, color: GRAY });
     });
     y -= 82;
-    const pend = circ.filter(m => m.st !== "verde").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
+    const pend = circ.filter(m => m.st === "rojo" || m.st === "amarillo").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
     const cols = [M + 8, M + 44, M + 164, M + 344, M + 430];
     const head = () => {
       sp.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: INK });
@@ -801,7 +811,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
     }
 
-    // Fotos: agrupadas por color (rojo, amarillo, verde) y dentro de cada color por número.
+    // Fotos: agrupadas por color (rojo, amarillo, azul, verde) y dentro de cada color por número.
     // Cuadrícula de 7 columnas, todas cuadradas del mismo tamaño.
     const COLS = 7, GAP = 10, CAP = 22, GH = 22, BOTTOM = 40;
     const cell = (W - 2 * M - GAP * (COLS - 1)) / COLS;
@@ -815,7 +825,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       return lines;
     };
-    const groups = ["rojo", "amarillo", "verde"].map(k => ({
+    const groups = ["rojo", "amarillo", "azul", "verde"].map(k => ({
       k, items: circ.filter(m => m.st === k && m.fotos && m.fotos.length).sort((a, b) => a.n - b.n).flatMap(m => m.fotos.map(f => ({ m, f })))
     })).filter(g => g.items.length);
     let fp = null, fy = 0;
@@ -856,7 +866,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       right(p, `Página ${all.indexOf(p) + 1} de ${N}`, 8, fontR, 22, GRAY);
     }
     await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
-    await pdf.attach(new TextEncoder().encode(JSON.stringify({ v: 1, meta: S.meta, marks: S.marks })), "recorrido.json", { mimeType: "application/json", description: "Datos del recorrido" });
+    await pdf.attach(new TextEncoder().encode(JSON.stringify({ v: 2, meta: S.meta, marks: S.marks })), "recorrido.json", { mimeType: "application/json", description: "Datos del recorrido" });
     pdf.setTitle(`Recorrido ${S.meta.obra} ${fmtFecha(S.meta.fecha)}`);
     pdf.setAuthor(S.meta.tecnico || "Automa");
     pdf.setCreator("Automa Recorridos");
@@ -955,7 +965,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (d && d.bytes && d.marks) {
       const b = $("resumeBtn"); b.hidden = false;
       b.textContent = `Continuar: ${d.meta?.obra || "recorrido guardado"} (${d.marks.length} círculos)`;
-      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), d.marks, d.meta, d.page, false); };
+      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), migrate(d.marks, d.v), d.meta, d.page, false); };
     }
   });
 })();
