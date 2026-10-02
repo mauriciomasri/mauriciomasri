@@ -195,7 +195,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 8;
+  const APP_VERSION = 9;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -410,11 +410,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   /* ---------- pointer: tap, pinch ---------- */
   const sc = $("scroller"), wrap = $("sheetwrap");
-  const ptrs = new Map(); let tapStart = null, pinch = null;
+  const ptrs = new Map(); let tapStart = null, pinch = null, drag = null;
   sc.addEventListener("pointerdown", e => {
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 1) tapStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+    // Modo Mover: arrastrar un círculo/texto lo cambia de lugar; arrastrar el plano lo desplaza.
+    if (ptrs.size === 1 && S.tool === "mano" && viewport) {
+      const r = $("cv").getBoundingClientRect();
+      const hit = hitTest(e.clientX - r.left, e.clientY - r.top, "any");
+      const v0 = hit ? viewport.convertToViewportPoint(hit.x, hit.y) : null;
+      drag = { hit, x0: e.clientX, y0: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop, v0, moved: false };
+      try { sc.setPointerCapture(e.pointerId); } catch (err) {}
+    }
     if (ptrs.size === 2) {
+      if (drag && drag.moved && drag.hit) changed();
+      drag = null;
       tapStart = null;
       const [a, b] = [...ptrs.values()];
       const r = wrap.getBoundingClientRect();
@@ -425,6 +435,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   sc.addEventListener("pointermove", e => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (drag && ptrs.size === 1) {
+      const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+      if (!drag.moved && Math.hypot(dx, dy) > 8) { drag.moved = true; if (drag.hit) snapshot(); }
+      if (drag.moved) {
+        if (drag.hit) {
+          const [nx, ny] = viewport.convertToPdfPoint(drag.v0[0] + dx, drag.v0[1] + dy);
+          drag.hit.x = nx; drag.hit.y = ny; drawMarks();
+        } else { sc.scrollLeft = drag.sl - dx; sc.scrollTop = drag.st - dy; }
+      }
+      return;
+    }
     if (pinch && ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
       pinch.f = Math.min(6, Math.max(0.3, Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0));
@@ -445,6 +466,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         sc.scrollLeft = cx * nz + 12 - (p.mx - r0.left); sc.scrollTop = cy * nz + 12 - (p.my - r0.top);
       }
       return;
+    }
+    if (drag) {
+      const d = drag; drag = null;
+      if (d.moved) { if (d.hit) changed(); tapStart = null; return; }
     }
     if (cancelled || !tapStart) return;
     const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y);
@@ -477,6 +502,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     S.tool = b.dataset.tool;
     document.querySelectorAll(".tool").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
     sc.style.cursor = S.tool === "mano" ? "grab" : "crosshair";
+    sc.style.touchAction = S.tool === "mano" ? "none" : "";
+    if (S.tool === "mano") toast("Arrastra un círculo para moverlo. Tócalo para ver sus datos.");
   });
   sc.style.cursor = "crosshair";
   $("undoBtn").onclick = () => {
