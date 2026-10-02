@@ -130,23 +130,51 @@ R('''  function openTextSheet(m, at) {''', '''  function pickPhoto(cb) {
       img.src = url;
     });
   }
+  function squareJpeg(dataUrl) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.width, img.height), out = 480, c = document.createElement("canvas");
+        c.width = c.height = out;
+        c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, out, out);
+        const b64 = c.toDataURL("image/jpeg", 0.8).split(",")[1];
+        res(Uint8Array.from(atob(b64), ch => ch.charCodeAt(0)));
+      };
+      img.onerror = rej; img.src = dataUrl;
+    });
+  }
   function openTextSheet(m, at) {''')
 R('''${m.n} · ${esc(label(m))}</text></g>`);''', '''${m.n} · ${esc(label(m))}${m.fotos && m.fotos.length ? " 📷" : ""}</text></g>`);''')
 
 # ---- photos in PDF ----
 R('''    sp.drawText("Automa · Abre este PDF en la página de recorridos para continuar el siguiente recorrido."''', '''    const conFoto = circ.filter(m => m.fotos && m.fotos.length).sort((a, b) => a.n - b.n);
-    let slot = 2, fp = null;
+    // Fotos en cuadrícula: todas cuadradas del mismo tamaño (6 x 3 por hoja)
+    const COLS = 6, ROWS = 3, GAP = 12, CAP = 26;
+    const cell = (W - 2 * M - GAP * (COLS - 1)) / COLS;
+    let idx = COLS * ROWS, fp = null;
+    const wrap2 = (t, size, maxW) => {
+      const words = safe(t).split(" "), lines = [""];
+      for (const w of words) {
+        const tryL = lines[lines.length - 1] ? lines[lines.length - 1] + " " + w : w;
+        if (fontR.widthOfTextAtSize(tryL, size) <= maxW) lines[lines.length - 1] = tryL;
+        else if (lines.length < 2) lines.push(w);
+        else { let l = lines[1]; while (l && fontR.widthOfTextAtSize(l + "…", size) > maxW) l = l.slice(0, -1); lines[1] = l + "…"; break; }
+      }
+      return lines;
+    };
     for (const m of conFoto) {
       for (const f of m.fotos) {
-        if (slot === 2) { fp = pdf.addPage([W, H]); slot = 0; fp.drawText(safe(`Fotos - ${S.meta.obra}`), { x: M, y: H - M, size: 14, font }); }
-        const img = await pdf.embedJpg(Uint8Array.from(atob(f.split(",")[1]), ch => ch.charCodeAt(0)));
-        const boxW = (W - 2 * M - 20) / 2, boxH = H - 2 * M - 50;
-        const k = Math.min(boxW / img.width, boxH / img.height);
-        const x0 = M + slot * (boxW + 20), y0 = M + 20;
-        fp.drawImage(img, { x: x0, y: y0 + (boxH - img.height * k), width: img.width * k, height: img.height * k });
+        if (idx === COLS * ROWS) { fp = pdf.addPage([W, H]); idx = 0; fp.drawText(safe(`Fotos - ${S.meta.obra}`), { x: M, y: H - M, size: 14, font }); }
+        const img = await pdf.embedJpg(await squareJpeg(f));
+        const col = idx % COLS, row = Math.floor(idx / COLS);
+        const x0 = M + col * (cell + GAP), top = H - M - 22 - row * (cell + CAP + GAP);
+        fp.drawImage(img, { x: x0, y: top - cell, width: cell, height: cell });
         const c = ST[m.st];
-        fp.drawText(safe(`${m.n} · ${c.name}${m.st === "amarillo" && m.mot ? " - " + m.mot : ""}${m.nota ? " - " + m.nota : ""}`).slice(0, 70), { x: x0, y: y0 - 4, size: 9, font, color: rgb(...c.text) });
-        slot++;
+        fp.drawText(`${m.n}`, { x: x0, y: top - cell - 10, size: 8, font, color: rgb(...c.text) });
+        const desc = m.st === "amarillo" ? (m.mot || "Detalle") + (m.nota ? " - " + m.nota : "") : c.name + (m.nota ? " - " + m.nota : "");
+        const nW = font.widthOfTextAtSize(`${m.n}`, 8) + 4;
+        wrap2(desc, 7, cell - nW).forEach((l, k) => fp.drawText(l, { x: x0 + nW, y: top - cell - 10 - k * 9, size: 7, font: fontR, color: rgb(.2, .2, .2) }));
+        idx++;
       }
     }
     sp.drawText("Automa · Abre este PDF en la app Automa Recorridos para continuar el siguiente recorrido."''')

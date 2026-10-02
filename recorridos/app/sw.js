@@ -1,6 +1,6 @@
 // Guarda la app completa en el celular para que funcione sin internet.
 // Al cambiar cualquier archivo de la app, sube VERSION para que se actualice.
-const VERSION = "recorridos-v2";
+const VERSION = "recorridos-v3";
 const FILES = [
   "./",
   "index.html",
