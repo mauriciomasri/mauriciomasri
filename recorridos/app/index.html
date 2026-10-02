@@ -195,7 +195,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 6;
+  const APP_VERSION = 7;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -256,12 +256,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         const j = JSON.parse(new TextDecoder().decode(att["recorrido.json"].content));
         base = att["original.pdf"].content;
         marks = j.marks || []; meta = j.meta || null;
-        toast(`Se cargaron ${marks.length} círculos del recorrido anterior`);
       }
       probe.destroy();
       const obra = meta?.obra || "";
       startSession(base instanceof Uint8Array ? base : new Uint8Array(base), marks,
-        { obra, tecnico: meta?.tecnico || S.meta.tecnico, fecha: today() }, 1, true);
+        { obra, tecnico: meta?.tecnico || S.meta.tecnico, fecha: today() }, 1, true, meta && meta.fecha ? meta : null);
     } catch (e) {
       $("busy").hidden = true;
       toast("No se pudo abrir ese archivo. Revisa que sea un PDF.");
@@ -271,7 +270,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (!n) return "Obra";
     return n.replace(/\.pdf$/i, "").replace(/^Rec_/i, "").replace(/_\d{6}$/, "").replace(/[_-]+/g, " ").trim() || "Obra";
   }
-  async function startSession(bytes, marks, meta, page, askMeta) {
+  async function startSession(bytes, marks, meta, page, askMeta, prev) {
     S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
     renumber();
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
@@ -281,7 +280,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     await showPage(S.page, true);
     $("busy").hidden = true;
     refreshHeader(); saveDraft();
-    if (askMeta) openMetaSheet(true);
+    if (prev) openPrevSheet(prev);
+    else if (askMeta) openMetaSheet(true);
   }
 
   /* ---------- rendering ---------- */
@@ -488,7 +488,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function closeSheet() { $("sheetHost").innerHTML = ""; }
   function sheet(html, bind) {
     $("sheetHost").innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
-    $("scrim").addEventListener("click", e => { if (e.target.id === "scrim" && !$("mObra")) closeSheet(); });
+    $("scrim").addEventListener("click", e => { if (e.target.id === "scrim" && !$("mObra") && !$("pvFix")) closeSheet(); });
     bind();
   }
   function chips(name, opts, val) {
@@ -595,6 +595,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       };
       const del = $("delTx");
       if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
+    });
+  }
+  function openPrevSheet(prev) {
+    const n = S.marks.filter(m => !isTxt(m)).length;
+    sheet(`
+      <h2>Recorrido del ${fmtFecha(prev.fecha)}</h2>
+      <p class="note">${esc(prev.obra || "Obra")} · ${esc(prev.tecnico || "")} · ${n} salida${n === 1 ? "" : "s"} marcada${n === 1 ? "" : "s"}. ¿Qué quieres hacer?</p>
+      <div class="stack">
+        <button type="button" class="btn primary" id="pvFix">Corregir ese recorrido</button>
+        <button type="button" class="btn" id="pvNew">Empezar recorrido nuevo (hoy)</button>
+      </div>
+      <p class="note"><b>Corregir</b> conserva la fecha del ${fmtFecha(prev.fecha)}. <b>Nuevo</b> usa la fecha de hoy y parte de los círculos de ese recorrido para que solo cambies los que avanzaron.</p>`, () => {
+      $("pvFix").onclick = () => { S.meta.fecha = prev.fecha; S.meta.tecnico = prev.tecnico || S.meta.tecnico; refreshHeader(); saveDraft(); closeSheet(); };
+      $("pvNew").onclick = () => { S.meta.fecha = today(); refreshHeader(); saveDraft(); closeSheet(); openMetaSheet(true); };
     });
   }
   function openMetaSheet(start) {
