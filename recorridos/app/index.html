@@ -150,9 +150,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Enviar</strong> y manda el PDF marcado a Mauricio.</span></li>
         </ol>
-        <p>Si abres el PDF del recorrido pasado, aparecen sus círculos y solo cambias los que avanzaron.</p>
+        <p>Para editar un recorrido que ya enviaste, usa <b>Cargar recorrido anterior</b>: regresa el plano con sus círculos, textos y fotos.</p>
         <div class="actions">
           <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
+          <button class="btn" id="prevBtn" type="button">Cargar recorrido anterior</button>
           <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
           <button class="linkbtn" id="demoBtn" type="button">Probar con un plano de ejemplo</button>
         </div>
@@ -199,7 +200,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 11;
+  const APP_VERSION = 12;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -250,16 +251,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
 
   /* ---------- loading ---------- */
-  async function loadPdf(bytes, fileName) {
+  async function loadPdf(bytes, fileName, wantPrev) {
     $("busy").hidden = false;
     try {
       let base = bytes, marks = [], meta = null;
       const probe = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
       const att = await probe.getAttachments().catch(() => null);
+      const info = (await probe.getMetadata().catch(() => null))?.info || {};
+      const isExport = info.Creator === "Automa Recorridos" || /^Recorrido /.test(info.Title || "");
       if (att && att["recorrido.json"] && att["original.pdf"]) {
+        // PDF generado por la app: se recupera el plano limpio con sus círculos, textos y fotos
+        // (sin portada, resumen ni hojas de fotos).
         const j = JSON.parse(new TextDecoder().decode(att["recorrido.json"].content));
         base = att["original.pdf"].content;
         marks = j.marks || []; meta = j.meta || null;
+      } else if (wantPrev || isExport) {
+        probe.destroy(); $("busy").hidden = true;
+        sheet(`
+          <h2>Este PDF no se puede editar</h2>
+          <p class="note">${isExport ? "Es un recorrido de la app, pero perdió los datos para editarlo." : "Este archivo no es un recorrido generado por la app."} Pasa cuando el PDF se mandó como foto, se guardó desde otra app o se editó (por ejemplo con Marcado).</p>
+          <p class="note">Abre el PDF tal como lo generó la app: el que se guardó con <b>Enviar → Guardar en el celular</b>, o el que llegó por WhatsApp <b>como documento</b>.</p>
+          <div class="stack"><button type="button" class="btn primary" id="errOk">Entendido</button></div>`, () => { $("errOk").onclick = closeSheet; });
+        return;
       }
       probe.destroy();
       const obra = meta?.obra || "";
@@ -832,6 +845,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     await pdf.attach(new TextEncoder().encode(JSON.stringify({ v: 1, meta: S.meta, marks: S.marks })), "recorrido.json", { mimeType: "application/json", description: "Datos del recorrido" });
     pdf.setTitle(`Recorrido ${S.meta.obra} ${fmtFecha(S.meta.fecha)}`);
     pdf.setAuthor(S.meta.tecnico || "Automa");
+    pdf.setCreator("Automa Recorridos");
     return pdf.save();
   }
   function fileName() {
@@ -909,11 +923,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
 
   /* ---------- wiring ---------- */
-  $("openBtn").onclick = () => $("fileIn").click();
+  let wantPrev = false;
+  $("openBtn").onclick = () => { wantPrev = false; $("fileIn").click(); };
+  $("prevBtn").onclick = () => { wantPrev = true; $("fileIn").click(); };
   $("fileIn").onchange = async e => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     $("busy").hidden = false;
-    loadPdf(new Uint8Array(await f.arrayBuffer()), f.name);
+    loadPdf(new Uint8Array(await f.arrayBuffer()), f.name, wantPrev);
   };
   $("demoBtn").onclick = async () => {
     $("busy").hidden = false;
