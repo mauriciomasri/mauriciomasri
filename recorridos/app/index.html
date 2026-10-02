@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Automa Recorridos</title>
+<meta name="theme-color" content="#1f4e79">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recorridos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500 600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:700;font-display:swap;src:url(fonts/barlow-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:500 600;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+*{-webkit-tap-highlight-color:transparent}
+body{margin:0;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+/* Layout: one-screen tool — header strip, plan viewport, fixed tool tray at the thumb */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#16202b; --muted:#5b6876; --line:#d3dae2;
+  --accent:#1f4e79; --accent-ink:#ffffff; --plan:#e3e8ee;
+  --rojo:#d93025; --amarillo:#e8a800; --amarillo-ink:#8a6400; --verde:#1e9e48;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-label:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#1a222b; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
+  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#1a222b; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
+  --accent:#6fa8dc; --accent-ink:#0d1620; --plan:#0c1015; --amarillo-ink:#f2c94c; color-scheme:dark}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:flex;flex-direction:column;height:100%}
+
+/* header */
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line);min-height:52px}
+.top .who{flex:1;min-width:0;display:flex;flex-direction:column;background:none;border:0;padding:0;text-align:left}
+.top .obra{font-family:var(--f-label);font-weight:700;font-size:19px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.counts{display:flex;gap:6px;font-family:var(--f-label);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
+.counts span{display:flex;align-items:center;gap:4px}
+.dot{width:12px;height:12px;border-radius:50%;border:2.5px solid currentColor;display:inline-block}
+.c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-verde{color:var(--verde)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* plan */
+.stage{flex:1;position:relative;min-height:0;background:var(--plan)}
+.scroller{position:absolute;inset:0;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}
+.sheetwrap{position:relative;margin:12px;transform-origin:0 0;box-shadow:0 1px 6px rgba(0,0,0,.18);background:#fff;width:max-content}
+.sheetwrap canvas{display:block}
+.sheetwrap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pager{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 6px;font-family:var(--f-label);font-weight:600}
+.pager button{border:0;background:none;width:32px;height:32px;border-radius:50%;font-size:18px}
+.zoom{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px}
+.zoom button:disabled{opacity:.4;cursor:default}
+.zoom button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:20px;font-weight:600}
+.busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--plan) 70%,transparent);font-family:var(--f-label);font-size:18px;font-weight:600}
+
+/* empty state */
+.empty{position:absolute;inset:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.empty .card{max-width:440px;display:flex;flex-direction:column;gap:16px}
+.empty h1{font-family:var(--f-label);font-size:30px;line-height:1.05;margin:0;text-wrap:balance}
+.empty p{margin:0;color:var(--muted);line-height:1.5}
+.steps{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:start;margin:0;padding:0;list-style:none}
+.steps b{font-family:var(--f-label);font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
+.steps span{line-height:1.4}
+.empty .actions{display:flex;flex-direction:column;gap:10px}
+.empty .actions .btn{padding:14px;font-size:17px}
+.linkbtn{background:none;border:0;color:var(--accent);font-weight:600;padding:6px 0;text-align:left}
+
+/* tool tray */
+.tray{background:var(--panel);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;align-items:stretch}
+.tool{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid transparent;border-radius:12px;background:var(--bg);padding:7px 2px;font-family:var(--f-label);font-weight:600;font-size:15px;letter-spacing:.02em}
+.tool .ring{width:24px;height:24px;border-radius:50%;border:4px solid currentColor}
+.tool[aria-pressed="true"]{border-color:currentColor;background:var(--panel)}
+.tool.t-rojo{color:var(--rojo)}.tool.t-amarillo{color:var(--amarillo-ink)}.tool.t-amarillo .ring{border-color:var(--amarillo)}.tool.t-verde{color:var(--verde)}
+.tool.t-mano,.tool.t-borrar,.tool.t-texto{color:var(--muted);flex:.85}
+.tool .ico{font-size:20px;line-height:24px}
+.tool[aria-pressed="true"].t-mano,.tool[aria-pressed="true"].t-borrar,.tool[aria-pressed="true"].t-texto{color:var(--ink)}
+
+/* bottom sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,15,20,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--panel);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:88%;overflow:auto}
+.sheet h2{font-family:var(--f-label);font-size:22px;margin:0;display:flex;align-items:center;gap:8px}
+.sheet label.lbl{font-family:var(--f-label);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:9px 14px;font-weight:500}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.field{display:flex;flex-direction:column;gap:6px}
+.sheet input,.sheet textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;box-sizing:border-box}
+.sheet textarea{min-height:64px;resize:vertical}
+.sheet .row{display:flex;gap:8px;flex-wrap:wrap}
+.sheet .row .btn{flex:1;padding:12px}
+.btn.danger{color:var(--rojo)}
+.note{font-size:13px;color:var(--muted);line-height:1.45}
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+@media (max-width:420px){.counts{font-size:14px;gap:4px}.top{gap:8px;padding-inline:12px}.tool{font-size:13px;overflow:hidden}.top .btn{padding:8px 10px}}
+.top{padding-top:calc(8px + env(safe-area-inset-top,0px))}
+.install{border:1px dashed var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.45}
+.install b{font-family:var(--f-label);font-size:16px}
+.fotos{display:flex;flex-wrap:wrap;gap:8px}
+.foto{position:relative;width:76px;height:76px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.foto button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:24px;padding:0}
+.addfoto{width:76px;height:76px;border-radius:8px;border:1.5px dashed var(--line);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--muted);gap:2px}
+.addfoto span{font-size:22px;line-height:1}
+.sheet .stack{display:flex;flex-direction:column;gap:10px}
+.sheet .stack .btn{padding:14px;font-size:16px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <button class="who" id="whoBtn" type="button" aria-label="Datos del recorrido">
+      <span class="obra" id="obraLbl">Recorrido de obra</span>
+      <span class="meta" id="metaLbl">Abre el plano para empezar</span>
+    </button>
+    <div class="counts" id="counts" hidden>
+      <span class="c-rojo"><i class="dot"></i><b id="nR">0</b></span>
+      <span class="c-amarillo"><i class="dot"></i><b id="nA">0</b></span>
+      <span class="c-verde"><i class="dot"></i><b id="nV">0</b></span>
+    </div>
+    <button class="btn primary" id="saveBtn" type="button" hidden>Enviar</button>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="empty" id="empty">
+      <div class="card">
+        <h1>Marca el avance sobre el plano</h1>
+        <ol class="steps">
+          <li style="display:contents"><b>1</b><span>Abre el PDF del plano que te mandaron.</span></li>
+          <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
+          <li style="display:contents"><b>3</b><span>Toca <strong>Enviar</strong> y manda el PDF marcado a Mauricio.</span></li>
+        </ol>
+        <p>Si abres el PDF del recorrido pasado, aparecen sus círculos y solo cambias los que avanzaron.</p>
+        <div class="actions">
+          <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
+          <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
+          <button class="linkbtn" id="demoBtn" type="button">Probar con un plano de ejemplo</button>
+        </div>
+        <div class="install" id="installHint" hidden>
+          <b>Instálala para usarla sin internet</b>
+          <span id="installTxt"></span>
+          <button class="btn primary" id="installBtn" type="button" hidden>Instalar app</button>
+        </div>
+      </div>
+    </div>
+    <div class="scroller" id="scroller" hidden>
+      <div class="sheetwrap" id="sheetwrap"><canvas id="cv"></canvas><svg id="ov" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </div>
+    <div class="pager" id="pager" hidden>
+      <button type="button" id="prevPg" aria-label="Hoja anterior">‹</button>
+      <span id="pgLbl">Hoja 1 de 1</span>
+      <button type="button" id="nextPg" aria-label="Hoja siguiente">›</button>
+    </div>
+    <div class="zoom" id="zoomBox" hidden>
+      <button type="button" id="zIn" aria-label="Acercar">+</button>
+      <button type="button" id="zOut" aria-label="Alejar">−</button>
+      <button type="button" id="zFit" aria-label="Ver hoja completa" style="font-size:14px">⤢</button>
+      <button type="button" id="undoBtn" aria-label="Deshacer" disabled style="margin-top:8px">↶</button>
+    </div>
+    <div class="busy" id="busy" hidden>Cargando plano…</div>
+  </main>
+
+  <nav class="tray" id="tray" hidden>
+    <button class="tool t-rojo" data-tool="rojo" aria-pressed="true" type="button"><i class="ring"></i>Falta tubo</button>
+    <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
+    <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Listo</button>
+    <button class="tool t-texto" data-tool="texto" aria-pressed="false" type="button"><span class="ico" style="font-family:var(--f-label);font-weight:700">Aa</span>Texto</button>
+    <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
+    <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
+  </nav>
+</div>
+
+<input type="file" id="fileIn" accept="application/pdf,.pdf" hidden>
+<div id="sheetHost"></div>
+
+<script src="lib/pdf.min.js"></script>
+<script src="lib/pdf-lib.min.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
+
+  const ST = {
+    rojo:     { name: "Falta tubería",     tool: "Falta tubo", rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
+    amarillo: { name: "Detalle pendiente", tool: "Detalle",    rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
+    verde:    { name: "Listo",             tool: "Listo",      rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+  };
+  const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
+  const RESP = ["Automa", "Obra"];
+  const TXT_COL = { Negro: [0.1, 0.1, 0.1], Rojo: [0.80, 0.12, 0.10], Amarillo: [0.62, 0.45, 0.00], Verde: [0.08, 0.50, 0.20] };
+  const TXT_CSS = { Negro: "var(--ink)", Rojo: "var(--rojo)", Amarillo: "#9e7300", Verde: "var(--verde)" };
+  const isTxt = m => m.kind === "txt";
+  let lastTxtCol = "Negro";
+  // circle radius in PDF points, proportional to the sheet so it matches the hand-drawn size
+  const radiusFor = v1 => 0.0055 * Math.max(v1.width, v1.height);
+
+  const S = {
+    bytes: null, doc: null, page: 1, pages: 0, zoom: 1, fitZoom: 1,
+    tool: "rojo", marks: [], nextN: 1, undo: [],
+    meta: { obra: "", tecnico: "", fecha: today() },
+  };
+  let pageObj = null, viewport = null, renderTask = null;
+
+  function today() { const d = new Date(); return d.toISOString().slice(0, 10); }
+  function fmtFecha(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
+  function toast(msg) {
+    const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function label(m) {
+    if (m.st === "rojo") return "Falta tubería";
+    if (m.st === "verde") return "OK";
+    return m.mot && m.mot !== "Otro" ? m.mot : (m.nota || "Detalle");
+  }
+
+  /* ---------- draft (IndexedDB) ---------- */
+  const DB = {
+    open() { return new Promise((res, rej) => { const r = indexedDB.open("automa-recorrido", 1); r.onupgradeneeded = () => r.result.createObjectStore("d"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+    async put(v) { try { const db = await this.open(); db.transaction("d", "readwrite").objectStore("d").put(v, "draft"); } catch (e) {} },
+    async get() { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("d").objectStore("d").get("draft"); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } },
+  };
+  let draftT = 0;
+  function saveDraft() {
+    clearTimeout(draftT);
+    draftT = setTimeout(() => DB.put({ bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }), 400);
+  }
+
+  /* ---------- loading ---------- */
+  async function loadPdf(bytes, fileName) {
+    $("busy").hidden = false;
+    try {
+      let base = bytes, marks = [], meta = null;
+      const probe = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      const att = await probe.getAttachments().catch(() => null);
+      if (att && att["recorrido.json"] && att["original.pdf"]) {
+        const j = JSON.parse(new TextDecoder().decode(att["recorrido.json"].content));
+        base = att["original.pdf"].content;
+        marks = j.marks || []; meta = j.meta || null;
+        toast(`Se cargaron ${marks.length} círculos del recorrido anterior`);
+      }
+      probe.destroy();
+      const obra = meta?.obra || obraFromName(fileName);
+      startSession(base instanceof Uint8Array ? base : new Uint8Array(base), marks,
+        { obra, tecnico: meta?.tecnico || S.meta.tecnico, fecha: today() }, 1, true);
+    } catch (e) {
+      $("busy").hidden = true;
+      toast("No se pudo abrir ese archivo. Revisa que sea un PDF.");
+    }
+  }
+  function obraFromName(n) {
+    if (!n) return "Obra";
+    return n.replace(/\.pdf$/i, "").replace(/^Rec_/i, "").replace(/_\d{6}$/, "").replace(/[_-]+/g, " ").trim() || "Obra";
+  }
+  async function startSession(bytes, marks, meta, page, askMeta) {
+    S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
+    S.nextN = marks.reduce((a, m) => Math.max(a, m.n || 0), 0) + 1;
+    S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+    S.pages = S.doc.numPages; S.page = Math.min(page || 1, S.pages);
+    $("empty").hidden = true; $("scroller").hidden = false; $("tray").hidden = false;
+    $("counts").hidden = false; $("saveBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
+    await showPage(S.page, true);
+    $("busy").hidden = true;
+    refreshHeader(); saveDraft();
+    if (askMeta && !S.meta.tecnico) openMetaSheet();
+  }
+
+  /* ---------- rendering ---------- */
+  async function showPage(n, fit) {
+    S.page = n;
+    pageObj = await S.doc.getPage(n);
+    const v1 = pageObj.getViewport({ scale: 1 });
+    S.fitZoom = Math.max(0.2, ($("scroller").clientWidth - 24) / v1.width);
+    if (fit) S.zoom = S.fitZoom;
+    $("pgLbl").textContent = `Hoja ${n} de ${S.pages}`;
+    await render();
+  }
+  async function render() {
+    if (!pageObj) return;
+    viewport = pageObj.getViewport({ scale: S.zoom });
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const maxPx = 14e6;
+    let k = dpr;
+    if (viewport.width * viewport.height * k * k > maxPx) k = Math.sqrt(maxPx / (viewport.width * viewport.height));
+    const vpx = pageObj.getViewport({ scale: S.zoom * k });
+    const cv = $("cv");
+    cv.width = Math.floor(vpx.width); cv.height = Math.floor(vpx.height);
+    cv.style.width = viewport.width + "px"; cv.style.height = viewport.height + "px";
+    $("ov").setAttribute("viewBox", `0 0 ${viewport.width} ${viewport.height}`);
+    $("sheetwrap").style.transform = "";
+    drawMarks();
+    if (renderTask) { try { renderTask.cancel(); } catch (e) {} }
+    renderTask = pageObj.render({ canvasContext: cv.getContext("2d"), viewport: vpx });
+    try { await renderTask.promise; } catch (e) {}
+  }
+  function drawMarks() {
+    if (!viewport) return;
+    const k = viewport.scale, out = [], rpt = radiusFor(pageObj.getViewport({ scale: 1 }));
+    for (const m of S.marks) {
+      if (m.page !== S.page) continue;
+      const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
+      if (isTxt(m)) {
+        const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
+        out.push(`<text data-id="${m.id}" x="${x}" y="${y}" font-family="Barlow, Arial, sans-serif" font-weight="600" font-size="${fs}" fill="${TXT_CSS[m.col] || TXT_CSS.Negro}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">` +
+          lines.map((l, i) => `<tspan x="${x}" dy="${i ? fs * 1.15 : 0}">${esc(l)}</tspan>`).join("") + `</text>`);
+        continue;
+      }
+      const r = Math.max(6, rpt * k), c = `var(--${m.st})`;
+      const fs = Math.max(8, rpt * 0.7 * k);
+      out.push(`<g data-id="${m.id}"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="${Math.max(2, rpt * 0.22 * k)}"/>` +
+        `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n} · ${esc(label(m))}${m.fotos && m.fotos.length ? " 📷" : ""}</text></g>`);
+    }
+    $("ov").innerHTML = out.join("");
+    const c = { rojo: 0, amarillo: 0, verde: 0 };
+    S.marks.forEach(m => { if (!isTxt(m)) c[m.st]++; });
+    $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nV").textContent = c.verde;
+    $("undoBtn").disabled = !S.undo.length;
+  }
+  function refreshHeader() {
+    $("obraLbl").textContent = S.meta.obra || "Obra sin nombre";
+    $("metaLbl").textContent = `${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
+  }
+
+  /* ---------- editing ---------- */
+  function snapshot() { S.undo.push(JSON.stringify({ marks: S.marks, nextN: S.nextN })); if (S.undo.length > 60) S.undo.shift(); }
+  function changed() { drawMarks(); saveDraft(); }
+  function hitTest(px, py, want) {
+    const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 })); let best = null, bd = Infinity;
+    for (const m of S.marks) {
+      if (m.page !== S.page) continue;
+      if (want === "circle" && isTxt(m)) continue;
+      const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
+      if (isTxt(m)) {
+        const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
+        const w = Math.max(...lines.map(l => l.length)) * fs * 0.55, h = lines.length * fs * 1.15;
+        if (px >= x - 6 && px <= x + w + 6 && py >= y - fs - 6 && py <= y - fs + h + 6) { best = m; bd = -1; }
+        continue;
+      }
+      const d = Math.hypot(px - x, py - y);
+      if (d < Math.max(rpt * k + 6, 18) && d < bd) { best = m; bd = d; }
+    }
+    return best;
+  }
+  function onTap(px, py) {
+    const colorTool = S.tool in ST;
+    const hit = hitTest(px, py, colorTool ? "circle" : "any");
+    if (S.tool === "mano" || (S.tool === "texto" && hit)) { if (hit) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
+    if (S.tool === "texto") { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
+    if (S.tool === "borrar") {
+      if (hit) { snapshot(); S.marks = S.marks.filter(m => m !== hit); changed(); }
+      return;
+    }
+    if (hit) {
+      if (hit.st === S.tool) { openMarkSheet(hit, false); return; }
+      snapshot(); hit.st = S.tool;
+      if (S.tool !== "amarillo") { hit.mot = ""; hit.resp = ""; }
+      changed();
+      if (S.tool === "amarillo") openMarkSheet(hit, true);
+      return;
+    }
+    const [x, y] = viewport.convertToPdfPoint(px, py);
+    snapshot();
+    const m = { id: Math.random().toString(36).slice(2, 9), n: S.nextN++, page: S.page, x, y, st: S.tool, mot: "", resp: "", nota: "" };
+    S.marks.push(m); changed();
+    if (S.tool === "amarillo") openMarkSheet(m, true);
+  }
+
+  /* ---------- pointer: tap, pinch ---------- */
+  const sc = $("scroller"), wrap = $("sheetwrap");
+  const ptrs = new Map(); let tapStart = null, pinch = null;
+  sc.addEventListener("pointerdown", e => {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) tapStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+    if (ptrs.size === 2) {
+      tapStart = null;
+      const [a, b] = [...ptrs.values()];
+      const r = wrap.getBoundingClientRect();
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y), f: 1, mx, my, ox: mx - r.left, oy: my - r.top };
+    }
+  });
+  sc.addEventListener("pointermove", e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      pinch.f = Math.min(6, Math.max(0.3, Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0));
+      wrap.style.transformOrigin = `${pinch.ox}px ${pinch.oy}px`;
+      wrap.style.transform = `scale(${pinch.f})`;
+    }
+  });
+  async function endPtr(e, cancelled) {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    if (pinch) {
+      if (ptrs.size === 0) {
+        const p = pinch; pinch = null;
+        const old = S.zoom; const nz = clamp(old * p.f);
+        const r0 = sc.getBoundingClientRect();
+        const cx = (p.ox) / old, cy = (p.oy) / old; // page coords (css @ zoom 1)
+        wrap.style.transform = ""; S.zoom = nz; await render();
+        sc.scrollLeft = cx * nz + 12 - (p.mx - r0.left); sc.scrollTop = cy * nz + 12 - (p.my - r0.top);
+      }
+      return;
+    }
+    if (cancelled || !tapStart) return;
+    const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y);
+    if (moved < 10 && Date.now() - tapStart.t < 700) {
+      const r = $("cv").getBoundingClientRect();
+      const px = e.clientX - r.left, py = e.clientY - r.top;
+      if (px >= 0 && py >= 0 && px <= r.width && py <= r.height) onTap(px, py);
+    }
+    tapStart = null;
+  }
+  sc.addEventListener("pointerup", e => endPtr(e, false));
+  sc.addEventListener("pointercancel", e => endPtr(e, true));
+  function clamp(z) { return Math.min(S.fitZoom * 8, Math.max(S.fitZoom * 0.6, z)); }
+  async function zoomBy(f) {
+    const old = S.zoom, nz = clamp(old * f);
+    const cx = (sc.scrollLeft + sc.clientWidth / 2 - 12) / old, cy = (sc.scrollTop + sc.clientHeight / 2 - 12) / old;
+    S.zoom = nz; await render();
+    sc.scrollLeft = cx * nz + 12 - sc.clientWidth / 2; sc.scrollTop = cy * nz + 12 - sc.clientHeight / 2;
+  }
+  $("zIn").onclick = () => zoomBy(1.6);
+  $("zOut").onclick = () => zoomBy(1 / 1.6);
+  $("zFit").onclick = async () => { S.zoom = S.fitZoom; await render(); sc.scrollTo(0, 0); };
+  $("prevPg").onclick = () => { if (S.page > 1) { showPage(S.page - 1, true); saveDraft(); } };
+  $("nextPg").onclick = () => { if (S.page < S.pages) { showPage(S.page + 1, true); saveDraft(); } };
+  let rzT = 0;
+  window.addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => { if (pageObj) { const atFit = Math.abs(S.zoom - S.fitZoom) < 1e-6; showPage(S.page, atFit); } }, 200); });
+
+  /* ---------- tools ---------- */
+  document.querySelectorAll(".tool").forEach(b => b.onclick = () => {
+    S.tool = b.dataset.tool;
+    document.querySelectorAll(".tool").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    sc.style.cursor = S.tool === "mano" ? "grab" : "crosshair";
+  });
+  sc.style.cursor = "crosshair";
+  $("undoBtn").onclick = () => {
+    const s = S.undo.pop(); if (!s) return;
+    const o = JSON.parse(s); S.marks = o.marks; S.nextN = o.nextN; changed();
+  };
+
+  /* ---------- sheets ---------- */
+  function closeSheet() { $("sheetHost").innerHTML = ""; }
+  function sheet(html, bind) {
+    $("sheetHost").innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+    $("scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeSheet(); });
+    bind();
+  }
+  function chips(name, opts, val) {
+    return `<div class="chips" data-group="${name}">` + opts.map(o => `<button type="button" class="chip" data-v="${esc(o)}" aria-pressed="${o === val}">${esc(o)}</button>`).join("") + `</div>`;
+  }
+  function bindChips(root, name, cb) {
+    root.querySelectorAll(`[data-group="${name}"] .chip`).forEach(c => c.onclick = () => {
+      root.querySelectorAll(`[data-group="${name}"] .chip`).forEach(x => x.setAttribute("aria-pressed", x === c ? "true" : "false"));
+      cb(c.dataset.v);
+    });
+  }
+  function openMarkSheet(m, fresh) {
+    const isA = m.st === "amarillo";
+    sheet(`
+      <h2><i class="dot c-${m.st}" style="width:16px;height:16px"></i>Salida ${m.n} · ${ST[m.st].name}</h2>
+      ${isA ? `<div class="field"><label class="lbl">¿Qué falta?</label>${chips("mot", MOTIVOS, m.mot)}</div>
+      <div class="field"><label class="lbl">¿Quién lo resuelve?</label>${chips("resp", RESP, m.resp)}</div>` : ""}
+      <div class="field"><label class="lbl" for="notaIn">Nota${isA ? "" : " (opcional)"}</label>
+        <textarea id="notaIn" placeholder="${isA ? "Ej. caja 5 cm abajo del nivel" : "Opcional"}">${esc(m.nota || "")}</textarea></div>
+      <div class="field"><label class="lbl">Fotos</label><div class="fotos" id="fotosBox"></div></div>
+      <div class="row">
+        ${fresh ? "" : `<button type="button" class="btn danger" id="delMk">Borrar círculo</button>`}
+        <button type="button" class="btn primary" id="okMk">Listo</button>
+      </div>`, () => {
+      const root = $("sheetHost");
+      const draft = { mot: m.mot, resp: m.resp };
+      bindChips(root, "mot", v => draft.mot = v);
+      bindChips(root, "resp", v => draft.resp = v);
+      let fotos = (m.fotos || []).slice();
+      const paintFotos = () => {
+        $("fotosBox").innerHTML = fotos.map((f, i) => `<div class="foto"><img src="${f}" alt="Foto ${i + 1}"><button type="button" data-i="${i}" aria-label="Quitar foto">×</button></div>`).join("") +
+          `<button type="button" class="addfoto" id="addFoto"><span>+</span>Foto</button>`;
+        $("fotosBox").querySelectorAll(".foto button").forEach(b => b.onclick = () => { fotos.splice(+b.dataset.i, 1); paintFotos(); });
+        $("addFoto").onclick = () => pickPhoto(async f => { try { fotos.push(await shrinkPhoto(f)); paintFotos(); } catch (e) { toast("No se pudo leer la foto"); } });
+      };
+      paintFotos();
+      $("okMk").onclick = () => {
+        const nota = $("notaIn").value.trim();
+        const fotosChanged = JSON.stringify(fotos) !== JSON.stringify(m.fotos || []);
+        if (draft.mot !== m.mot || draft.resp !== m.resp || nota !== (m.nota || "") || fotosChanged) {
+          if (!fresh) snapshot();
+          m.mot = draft.mot; m.resp = draft.resp; m.nota = nota; m.fotos = fotos; changed();
+        }
+        closeSheet();
+      };
+      const del = $("delMk");
+      if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
+    });
+  }
+  function pickPhoto(cb) {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = () => { if (inp.files[0]) cb(inp.files[0]); };
+    inp.click();
+  }
+  function shrinkPhoto(file) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.72));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("foto")); };
+      img.src = url;
+    });
+  }
+  function openTextSheet(m, at) {
+    let col = m ? m.col : lastTxtCol;
+    sheet(`
+      <h2>${m ? "Editar texto" : "Agregar texto"}</h2>
+      <div class="field"><label class="lbl" for="txtIn">Texto</label>
+        <textarea id="txtIn" placeholder="Ej. Salida nueva por petición del cliente">${m ? esc(m.text) : ""}</textarea></div>
+      <div class="field"><label class="lbl">Color</label>${chips("col", Object.keys(TXT_COL), col)}</div>
+      <div class="row">
+        ${m ? `<button type="button" class="btn danger" id="delTx">Borrar texto</button>` : ""}
+        <button type="button" class="btn primary" id="okTx">Listo</button>
+      </div>`, () => {
+      bindChips($("sheetHost"), "col", v => col = v);
+      const ta = $("txtIn"); setTimeout(() => ta.focus(), 50);
+      $("okTx").onclick = () => {
+        const text = ta.value.replace(/\s+$/, "");
+        lastTxtCol = col;
+        if (!text) { if (m) { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); } closeSheet(); return; }
+        snapshot();
+        if (m) { m.text = text; m.col = col; }
+        else S.marks.push({ kind: "txt", id: Math.random().toString(36).slice(2, 9), page: S.page, x: at.x, y: at.y, text, col });
+        changed(); closeSheet();
+      };
+      const del = $("delTx");
+      if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
+    });
+  }
+  function openMetaSheet() {
+    sheet(`
+      <h2>Datos del recorrido</h2>
+      <div class="field"><label class="lbl" for="mObra">Obra</label><input id="mObra" value="${esc(S.meta.obra)}" autocomplete="off"></div>
+      <div class="field"><label class="lbl" for="mTec">Técnico</label><input id="mTec" value="${esc(S.meta.tecnico)}" placeholder="Tu nombre" autocomplete="name"></div>
+      <div class="field"><label class="lbl" for="mFecha">Fecha del recorrido</label><input id="mFecha" type="date" value="${S.meta.fecha}"></div>
+      <div class="row">${S.bytes ? `<button type="button" class="btn" id="mNew">Abrir otro plano</button>` : ""}<button type="button" class="btn primary" id="mOk">Guardar</button></div>`, () => {
+      $("mOk").onclick = () => {
+        S.meta.obra = $("mObra").value.trim() || S.meta.obra;
+        S.meta.tecnico = $("mTec").value.trim();
+        S.meta.fecha = $("mFecha").value || today();
+        try { localStorage.setItem("automa-tecnico", S.meta.tecnico); } catch (e) {}
+        refreshHeader(); saveDraft(); closeSheet();
+      };
+      const nb = $("mNew"); if (nb) nb.onclick = () => { closeSheet(); $("fileIn").click(); };
+    });
+  }
+  $("whoBtn").onclick = () => { if (S.bytes) openMetaSheet(); };
+
+  /* ---------- export ---------- */
+  async function buildPdf() {
+    const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+    const pdf = await PDFDocument.load(S.bytes.slice(0), { ignoreEncryption: true });
+    const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const fontR = await pdf.embedFont(StandardFonts.Helvetica);
+    const safe = s => String(s).replace(/[^\x20-\x7E -ÿ]/g, "");
+    for (let p = 1; p <= S.pages; p++) {
+      const ms = S.marks.filter(m => m.page === p); if (!ms.length) continue;
+      const pg = pdf.getPage(p - 1);
+      const jp = await S.doc.getPage(p); const v1 = jp.getViewport({ scale: 1 });
+      const rot = ((jp.rotate % 360) + 360) % 360, rpt = radiusFor(v1);
+      for (const m of ms) {
+        if (isTxt(m)) {
+          const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
+          m.text.split("\n").forEach((l, i) => {
+            const [tx, ty] = v1.convertToPdfPoint(vx, vy + i * rpt * 1.15);
+            pg.drawText(safe(l), { x: tx, y: ty, size: rpt, font, color: rgb(...(TXT_COL[m.col] || TXT_COL.Negro)), rotate: degrees(rot) });
+          });
+          continue;
+        }
+        const c = ST[m.st];
+        pg.drawCircle({ x: m.x, y: m.y, size: rpt, borderColor: rgb(...c.rgb), borderWidth: rpt * 0.22 });
+        const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
+        const [tx, ty] = v1.convertToPdfPoint(vx + rpt * 1.3, vy + rpt * 0.25);
+        pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
+      }
+    }
+    // summary page
+    const W = 842, H = 595, M = 40;
+    let sp = pdf.addPage([W, H]), y = H - M;
+    const circ = S.marks.filter(m => !isTxt(m)), notas = S.marks.filter(isTxt);
+    const cnt = { rojo: 0, amarillo: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
+    const total = circ.length || 1;
+    sp.drawText(safe(`Recorrido de obra - ${S.meta.obra}`), { x: M, y: y - 6, size: 18, font });
+    y -= 26;
+    sp.drawText(safe(`Fecha: ${fmtFecha(S.meta.fecha)}    Técnico: ${S.meta.tecnico || "-"}    Salidas revisadas: ${circ.length}`), { x: M, y, size: 10, font: fontR });
+    y -= 26;
+    let x = M;
+    for (const k of ["verde", "amarillo", "rojo"]) {
+      const c = ST[k];
+      sp.drawCircle({ x: x + 7, y: y + 3, size: 6, borderColor: rgb(...c.rgb), borderWidth: 2 });
+      const t = safe(`${c.name}: ${cnt[k]} (${Math.round(cnt[k] * 100 / total)}%)`);
+      sp.drawText(t, { x: x + 18, y, size: 11, font, color: rgb(...c.text) });
+      x += font.widthOfTextAtSize(t, 11) + 40;
+    }
+    y -= 30;
+    const pend = circ.filter(m => m.st !== "verde").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
+    const cols = [M, M + 34, M + 150, M + 330, M + 410];
+    const head = () => {
+      ["#", "Status", "Qué falta", "Responsable", "Nota"].forEach((h, i) => sp.drawText(h, { x: cols[i], y, size: 9, font }));
+      y -= 6; sp.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.6, color: rgb(.6, .6, .6) }); y -= 13;
+    };
+    if (!pend.length) sp.drawText("Sin pendientes: todas las salidas revisadas están listas.", { x: M, y, size: 11, font: fontR });
+    else {
+      sp.drawText("Pendientes", { x: M, y, size: 12, font }); y -= 18; head();
+      for (const m of pend) {
+        if (y < M) { sp = pdf.addPage([W, H]); y = H - M; head(); }
+        const c = ST[m.st];
+        const row = [String(m.n), c.name, m.st === "rojo" ? "Tubería" : (m.mot || "-"), m.resp || (m.st === "rojo" ? "Obra" : "-"), m.nota || ""];
+        row.forEach((v, i) => {
+          let s = safe(v); const maxW = (i === 4 ? W - M : cols[i + 1]) - cols[i] - 6;
+          while (s.length > 1 && fontR.widthOfTextAtSize(s, 9) > maxW) s = s.slice(0, -2) + "…";
+          sp.drawText(s, { x: cols[i], y, size: 9, font: i === 1 ? font : fontR, color: i === 1 ? rgb(...c.text) : rgb(.1, .1, .1) });
+        });
+        y -= 14;
+      }
+    }
+    if (notas.length) {
+      y -= 16; if (y < M + 30) { sp = pdf.addPage([W, H]); y = H - M; }
+      sp.drawText("Notas en el plano", { x: M, y, size: 12, font }); y -= 18;
+      for (const m of notas) {
+        for (const l of (`Hoja ${m.page}: ` + m.text.replace(/\n/g, " ")).match(/.{1,140}(\s|$)/g) || []) {
+          if (y < M) { sp = pdf.addPage([W, H]); y = H - M; }
+          sp.drawText(safe(l.trim()), { x: M, y, size: 9, font: fontR }); y -= 13;
+        }
+      }
+    }
+    const conFoto = circ.filter(m => m.fotos && m.fotos.length).sort((a, b) => a.n - b.n);
+    let slot = 2, fp = null;
+    for (const m of conFoto) {
+      for (const f of m.fotos) {
+        if (slot === 2) { fp = pdf.addPage([W, H]); slot = 0; fp.drawText(safe(`Fotos - ${S.meta.obra}`), { x: M, y: H - M, size: 14, font }); }
+        const img = await pdf.embedJpg(Uint8Array.from(atob(f.split(",")[1]), ch => ch.charCodeAt(0)));
+        const boxW = (W - 2 * M - 20) / 2, boxH = H - 2 * M - 50;
+        const k = Math.min(boxW / img.width, boxH / img.height);
+        const x0 = M + slot * (boxW + 20), y0 = M + 20;
+        fp.drawImage(img, { x: x0, y: y0 + (boxH - img.height * k), width: img.width * k, height: img.height * k });
+        const c = ST[m.st];
+        fp.drawText(safe(`${m.n} · ${c.name}${m.st === "amarillo" && m.mot ? " - " + m.mot : ""}${m.nota ? " - " + m.nota : ""}`).slice(0, 70), { x: x0, y: y0 - 4, size: 9, font, color: rgb(...c.text) });
+        slot++;
+      }
+    }
+    sp.drawText("Automa · Abre este PDF en la app Automa Recorridos para continuar el siguiente recorrido.", { x: M, y: 22, size: 7.5, font: fontR, color: rgb(.45, .45, .45) });
+    await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
+    await pdf.attach(new TextEncoder().encode(JSON.stringify({ v: 1, meta: S.meta, marks: S.marks })), "recorrido.json", { mimeType: "application/json", description: "Datos del recorrido" });
+    pdf.setTitle(`Recorrido ${S.meta.obra} ${fmtFecha(S.meta.fecha)}`);
+    pdf.setAuthor(S.meta.tecnico || "Automa");
+    return pdf.save();
+  }
+  function fileName() {
+    const [y, m, d] = S.meta.fecha.split("-");
+    const ob = (S.meta.obra || "Obra").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "");
+    return `Rec_${ob}_${d}${m}${y.slice(2)}.pdf`;
+  }
+  async function makeFile() {
+    const bytes = await buildPdf();
+    return new File([bytes], fileName(), { type: "application/pdf" });
+  }
+  function downloadFile(file) {
+    const a = document.createElement("a"), url = URL.createObjectURL(file);
+    a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  $("saveBtn").onclick = async () => {
+    if (!S.marks.length) { toast("Aún no hay nada marcado en el plano"); return; }
+    if (!S.meta.tecnico) { openMetaSheet(); toast("Pon tu nombre antes de enviar"); return; }
+    const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Generando…";
+    let file;
+    try { file = await makeFile(); }
+    catch (e) { toast("No se pudo generar el PDF. Intenta de nuevo."); return; }
+    finally { btn.disabled = false; btn.textContent = "Enviar"; }
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    sheet(`
+      <h2>PDF listo</h2>
+      <p class="note">${esc(file.name)} · ${(file.size / 1048576).toFixed(1)} MB</p>
+      <div class="stack">
+        ${canShare ? `<button type="button" class="btn primary" id="shareBtn">Enviar por WhatsApp, correo…</button>` : ""}
+        <button type="button" class="btn${canShare ? "" : " primary"}" id="dlBtn">Guardar en el celular</button>
+      </div>
+      <p class="note">Si no tienes señal, guárdalo y envíalo después. El recorrido también queda guardado en la app.</p>`, () => {
+      const sb = $("shareBtn");
+      if (sb) sb.onclick = async () => {
+        try { await navigator.share({ files: [file], title: file.name }); closeSheet(); toast("Enviado"); }
+        catch (e) { if (e && e.name !== "AbortError") toast("No se pudo compartir. Usa Guardar en el celular."); }
+      };
+      $("dlBtn").onclick = () => { downloadFile(file); closeSheet(); toast("PDF guardado en Descargas"); };
+    });
+  };
+
+  /* ---------- install hint ---------- */
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (!standalone) {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    $("installTxt").textContent = ios
+      ? "En Safari toca el botón Compartir (cuadro con flecha) y luego “Agregar a inicio”. Ábrela siempre desde ese ícono."
+      : "En Chrome toca el menú ⋮ y luego “Instalar app” o “Agregar a pantalla principal”. Ábrela siempre desde ese ícono.";
+    $("installHint").hidden = false;
+    let deferred = null;
+    addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; $("installBtn").hidden = false; });
+    $("installBtn").onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $("installBtn").hidden = true; };
+  }
+
+  /* ---------- demo plan ---------- */
+  async function demoBytes() {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const pdf = await PDFDocument.create(); const pg = pdf.addPage([842, 595]);
+    const f = await pdf.embedFont(StandardFonts.Helvetica);
+    const k = rgb(.15, .15, .15), g = rgb(.55, .55, .55);
+    const rect = (x, y, w, h, t) => pg.drawRectangle({ x, y, width: w, height: h, borderColor: k, borderWidth: t || 3 });
+    rect(60, 60, 600, 470, 4);
+    rect(60, 300, 230, 230); rect(290, 380, 200, 150); rect(490, 300, 170, 230); rect(60, 60, 330, 240); rect(390, 60, 270, 240);
+    [["COCINA", 130, 420], ["RECÁMARA", 345, 460], ["BAÑO", 545, 420], ["ESTANCIA", 190, 180], ["COMEDOR", 490, 180]]
+      .forEach(([t, x, y]) => pg.drawText(t, { x, y, size: 9, font: f, color: g }));
+    pg.drawText("PLANO DE EJEMPLO · PB", { x: 690, y: 520, size: 10, font: f, color: k });
+    const sym = [[110, 360, [.85, .2, .2]], [250, 500, [.85, .2, .2]], [330, 410, [.2, .7, .3]], [460, 500, [.95, .55, .1]], [520, 340, [.85, .2, .2]],
+      [100, 100, [.6, .2, .8]], [250, 250, [.95, .55, .1]], [360, 120, [.2, .7, .3]], [430, 260, [.85, .2, .2]], [600, 110, [.95, .55, .1]], [620, 260, [.6, .2, .8]]];
+    sym.forEach(([x, y, c]) => pg.drawRectangle({ x: x - 4, y: y - 4, width: 8, height: 8, color: rgb(...c) }));
+    pg.drawRectangle({ x: 690, y: 330, width: 110, height: 170, borderColor: k, borderWidth: 1 });
+    [["Red UTP", [.85, .2, .2]], ["Bocina", [.95, .55, .1]], ["Cámara", [.6, .2, .8]], ["Repetidor WiFi", [.2, .7, .3]]]
+      .forEach(([t, c], i) => { pg.drawRectangle({ x: 700, y: 475 - i * 22, width: 8, height: 8, color: rgb(...c) }); pg.drawText(t, { x: 714, y: 476 - i * 22, size: 8, font: f }); });
+    return pdf.save();
+  }
+
+  /* ---------- wiring ---------- */
+  $("openBtn").onclick = () => $("fileIn").click();
+  $("fileIn").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    $("busy").hidden = false;
+    loadPdf(new Uint8Array(await f.arrayBuffer()), f.name);
+  };
+  $("demoBtn").onclick = async () => {
+    $("busy").hidden = false;
+    const b = await demoBytes();
+    startSession(new Uint8Array(b), [], { obra: "Obra de ejemplo", tecnico: S.meta.tecnico || "", fecha: today() }, 1, false);
+  };
+  try { S.meta.tecnico = localStorage.getItem("automa-tecnico") || ""; } catch (e) {}
+  DB.get().then(d => {
+    if (d && d.bytes && d.marks) {
+      const b = $("resumeBtn"); b.hidden = false;
+      b.textContent = `Continuar: ${d.meta?.obra || "recorrido guardado"} (${d.marks.length} círculos)`;
+      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), d.marks, d.meta, d.page, false); };
+    }
+  });
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>

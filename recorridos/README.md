@@ -20,6 +20,11 @@ por eso al volver a abrirlo se pueden seguir editando.
 
 Página publicada: https://claude.ai/artifact/GDhe1PGb6VwL19Dxkr1e7z
 
+**App instalable sin internet:** carpeta [`app/`](app/README.md). Se publica con
+GitHub Pages en `https://mauriciomasri.github.io/mauriciomasri/recorridos/app/`.
+Además de lo anterior, permite tomar fotos por salida y enviar el PDF directo
+por WhatsApp.
+
 ## Status de cada salida
 
 | Status | Significado | Se captura |
@@ -114,5 +119,6 @@ amarillo/rojo y responsable **Obra** (Salida, Planta, Motivo, Nota, Foto).
 
 ## Pendiente
 
-- [ ] Compartir la página con los técnicos y probar en obra
+- [ ] Activar GitHub Pages y enviar el enlace de instalación a los técnicos
+- [ ] Probar en obra (iPhone y Android, en modo avión)
 - [ ] (Opcional) Configurar Studio según esta guía para llevar el historial en Odoo
