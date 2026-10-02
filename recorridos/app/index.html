@@ -119,6 +119,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .foto button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:24px;padding:0}
 .addfoto{width:76px;height:76px;border-radius:8px;border:1.5px dashed var(--line);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--muted);gap:2px}
 .addfoto span{font-size:22px;line-height:1}
+.drawbar{position:absolute;top:58px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 8px;box-shadow:0 2px 10px rgba(0,0,0,.15);max-width:calc(100% - 24px)}
+.drawbar .modes{display:flex;gap:4px}
+.drawbar .modes button{display:flex;flex-direction:column;align-items:center;gap:0;border:1.5px solid transparent;background:var(--bg);border-radius:10px;padding:4px 8px;min-width:52px;font-family:var(--f-label);font-weight:600;font-size:12px;color:var(--ink)}
+.drawbar .modes button b{font-size:18px;line-height:20px}
+.drawbar .modes button[aria-pressed="true"]{border-color:var(--ink);background:var(--panel)}
+.drawbar .cols{display:flex;gap:10px}
+.drawbar .cols button{width:26px;height:26px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--line);padding:0}
+.drawbar .cols button[aria-pressed="true"]{box-shadow:0 0 0 2.5px var(--ink)}
 .quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#2b3440;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
 .sheet .stack{display:flex;flex-direction:column;gap:10px}
 .sheet .stack .btn{padding:14px;font-size:16px}
@@ -180,6 +188,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <button type="button" id="undoBtn" aria-label="Deshacer" disabled style="margin-top:8px">↶</button>
     </div>
     <button class="quickfoto" id="quickFoto" type="button" hidden></button>
+    <div class="drawbar" id="drawbar" hidden>
+      <div class="modes">
+        <button type="button" data-mode="texto" aria-pressed="false"><b>Aa</b><span>Texto</span></button>
+        <button type="button" data-mode="flecha" aria-pressed="true"><b>↗</b><span>Flecha</span></button>
+        <button type="button" data-mode="linea" aria-pressed="false"><b>╱</b><span>Línea</span></button>
+        <button type="button" data-mode="lapiz" aria-pressed="false"><b>〰</b><span>Lápiz</span></button>
+      </div>
+      <div class="cols" id="drawCols"></div>
+    </div>
     <div class="busy" id="busy" hidden>Cargando plano…</div>
   </main>
 
@@ -188,7 +205,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
     <button class="tool t-azul" data-tool="azul" aria-pressed="false" type="button"><i class="ring"></i>Cableado</button>
     <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Terminado</button>
-    <button class="tool t-texto" data-tool="texto" aria-pressed="false" type="button"><span class="ico" style="font-family:var(--f-label);font-weight:700">Aa</span>Texto</button>
+    <button class="tool t-texto" data-tool="dibujo" aria-pressed="false" type="button"><span class="ico">✏️</span>Dibujar</button>
     <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
     <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
   </nav>
@@ -202,7 +219,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 15;
+  const APP_VERSION = 16;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -214,16 +231,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   };
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
   const RESP = ["Automa", "Obra"];
-  const TXT_COL = { Negro: [0.1, 0.1, 0.1], Rojo: [0.80, 0.12, 0.10], Amarillo: [0.62, 0.45, 0.00], Verde: [0.08, 0.50, 0.20] };
-  const TXT_CSS = { Negro: "var(--ink)", Rojo: "var(--rojo)", Amarillo: "#9e7300", Verde: "var(--verde)" };
+  const TXT_COL = { Negro: [0.1, 0.1, 0.1], Rojo: [0.80, 0.12, 0.10], Amarillo: [0.62, 0.45, 0.00], Azul: [0.08, 0.40, 0.75], Verde: [0.08, 0.50, 0.20] };
+  const TXT_CSS = { Negro: "var(--ink)", Rojo: "var(--rojo)", Amarillo: "#9e7300", Azul: "var(--azul)", Verde: "var(--verde)" };
   const isTxt = m => m.kind === "txt";
-  let lastTxtCol = "Negro";
+  const isDraw = m => m.kind === "draw";
+  const isCircle = m => !m.kind;
+  let lastTxtCol = "Rojo";
   // circle radius in PDF points, proportional to the sheet so it matches the hand-drawn size
   const radiusFor = v1 => 0.0075 * Math.max(v1.width, v1.height);
 
   const S = {
     bytes: null, doc: null, page: 1, pages: 0, zoom: 1, fitZoom: 1,
-    tool: "rojo", marks: [], nextN: 1, undo: [],
+    tool: "rojo", drawMode: "flecha", marks: [], nextN: 1, undo: [],
     meta: { obra: "", tecnico: "", fecha: today() },
   };
   let pageObj = null, viewport = null, renderTask = null;
@@ -341,8 +360,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function drawMarks() {
     if (!viewport) return;
     const k = viewport.scale, out = [], rpt = radiusFor(pageObj.getViewport({ scale: 1 }));
+    const strokes = S.marks.filter(m => isDraw(m) && m.page === S.page);
+    if (live && live.page === S.page) strokes.push(live);
+    for (const m of strokes) out.push(drawSvg(m, k, rpt));
     for (const m of S.marks) {
-      if (m.page !== S.page) continue;
+      if (m.page !== S.page || isDraw(m)) continue;
       const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
       if (isTxt(m)) {
         const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
@@ -357,7 +379,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     }
     $("ov").innerHTML = out.join("");
     const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
-    S.marks.forEach(m => { if (!isTxt(m)) c[m.st]++; });
+    S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
     $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nZ").textContent = c.azul; $("nV").textContent = c.verde;
     $("undoBtn").disabled = !S.undo.length;
   }
@@ -387,16 +409,46 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function snapshot() { S.undo.push(JSON.stringify({ marks: S.marks, nextN: S.nextN })); if (S.undo.length > 60) S.undo.shift(); }
   // Numeración corrida 1, 2, 3… sin huecos: al borrar una salida, las siguientes se recorren.
   function renumber() {
-    const circ = S.marks.filter(m => !isTxt(m)).sort((a, b) => a.n - b.n);
+    const circ = S.marks.filter(isCircle).sort((a, b) => a.n - b.n);
     circ.forEach((m, i) => { m.n = i + 1; });
     S.nextN = circ.length + 1;
   }
   function changed() { renumber(); drawMarks(); saveDraft(); }
+  // Dibujos (flecha, línea, lápiz): puntos en coordenadas del PDF.
+  let live = null;
+  const arrowHead = (a, b, h) => {
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), s = 0.5;
+    return [[b[0] - h * Math.cos(ang - s), b[1] - h * Math.sin(ang - s)], [b[0] - h * Math.cos(ang + s), b[1] - h * Math.sin(ang + s)]];
+  };
+  function drawSvg(m, k, rpt) {
+    const v = m.pts.map(p => viewport.convertToViewportPoint(p[0], p[1]));
+    const w = Math.max(2.5, rpt * 0.28 * k), col = TXT_CSS[m.col] || TXT_CSS.Rojo;
+    let d = "M" + v.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L");
+    if (m.shape === "flecha" && v.length > 1) {
+      const [l, r] = arrowHead(v[v.length - 2], v[v.length - 1], Math.max(12, rpt * 1.4 * k)), e = v[v.length - 1];
+      d += ` M${l[0]} ${l[1]} L${e[0]} ${e[1]} L${r[0]} ${r[1]}`;
+    }
+    return `<path data-id="${m.id}" d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  function distSeg(p, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+    const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+    return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+  }
   function hitTest(px, py, want) {
     const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 })); let best = null, bd = Infinity;
     for (const m of S.marks) {
       if (m.page !== S.page) continue;
-      if (want === "circle" && isTxt(m)) continue;
+      if (want === "circle" && !isCircle(m)) continue;
+      if (isDraw(m)) {
+        const v = m.pts.map(p => viewport.convertToViewportPoint(p[0], p[1]));
+        for (let i = 0; i < v.length - 1 || i === 0; i++) {
+          const d = distSeg([px, py], v[i], v[Math.min(i + 1, v.length - 1)]);
+          if (d < 14 && d < bd) { best = m; bd = d; }
+          if (v.length < 2) break;
+        }
+        continue;
+      }
       const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
       if (isTxt(m)) {
         const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
@@ -413,8 +465,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     clearTimeout(quickT); $("quickFoto").hidden = true;
     const colorTool = S.tool in ST;
     const hit = hitTest(px, py, colorTool ? "circle" : "any");
-    if (S.tool === "mano" || (S.tool === "texto" && hit)) { if (hit) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
-    if (S.tool === "texto") { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
+    const textTool = S.tool === "dibujo" && S.drawMode === "texto";
+    if (S.tool === "mano" || (textTool && hit && isTxt(hit))) { if (hit && !isDraw(hit)) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
+    if (textTool) { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
+    if (S.tool === "dibujo") return;
     if (S.tool === "borrar") {
       if (hit) { snapshot(); S.marks = S.marks.filter(m => m !== hit); changed(); }
       return;
@@ -444,12 +498,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (ptrs.size === 1 && S.tool === "mano" && viewport) {
       const r = $("cv").getBoundingClientRect();
       const hit = hitTest(e.clientX - r.left, e.clientY - r.top, "any");
-      const v0 = hit ? viewport.convertToViewportPoint(hit.x, hit.y) : null;
-      drag = { hit, x0: e.clientX, y0: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop, v0, moved: false };
+      const anchor = hit ? (isDraw(hit) ? hit.pts[0] : [hit.x, hit.y]) : null;
+      const v0 = hit ? viewport.convertToViewportPoint(anchor[0], anchor[1]) : null;
+      drag = { hit, x0: e.clientX, y0: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop, v0, moved: false, orig: hit && isDraw(hit) ? hit.pts.map(p => p.slice()) : null };
+      try { sc.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (ptrs.size === 1 && S.tool === "dibujo" && S.drawMode !== "texto" && viewport) {
+      const r = $("cv").getBoundingClientRect();
+      live = { kind: "draw", shape: S.drawMode, col: lastTxtCol, page: S.page, pts: [viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top)], v0: [e.clientX, e.clientY], len: 0 };
       try { sc.setPointerCapture(e.pointerId); } catch (err) {}
     }
     if (ptrs.size === 2) {
       if (drag && drag.moved && drag.hit) changed();
+      if (live) { live = null; drawMarks(); }
       drag = null;
       tapStart = null;
       const [a, b] = [...ptrs.values()];
@@ -461,13 +522,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   sc.addEventListener("pointermove", e => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (live && ptrs.size === 1) {
+      const r = $("cv").getBoundingClientRect();
+      const pt = viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top);
+      live.len = Math.max(live.len, Math.hypot(e.clientX - live.v0[0], e.clientY - live.v0[1]));
+      if (live.shape === "lapiz") {
+        const last = viewport.convertToViewportPoint(...live.pts[live.pts.length - 1]);
+        if (Math.hypot(e.clientX - r.left - last[0], e.clientY - r.top - last[1]) > 3) live.pts.push(pt);
+      } else live.pts[1] = pt;
+      drawMarks();
+      return;
+    }
     if (drag && ptrs.size === 1) {
       const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
       if (!drag.moved && Math.hypot(dx, dy) > 8) { drag.moved = true; if (drag.hit) snapshot(); }
       if (drag.moved) {
         if (drag.hit) {
           const [nx, ny] = viewport.convertToPdfPoint(drag.v0[0] + dx, drag.v0[1] + dy);
-          drag.hit.x = nx; drag.hit.y = ny; drawMarks();
+          if (drag.orig) { const ddx = nx - drag.orig[0][0], ddy = ny - drag.orig[0][1]; drag.hit.pts = drag.orig.map(p => [p[0] + ddx, p[1] + ddy]); }
+          else { drag.hit.x = nx; drag.hit.y = ny; }
+          drawMarks();
         } else { sc.scrollLeft = drag.sl - dx; sc.scrollTop = drag.st - dy; }
       }
       return;
@@ -475,8 +549,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (pinch && ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
       pinch.f = Math.min(6, Math.max(0.3, Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0));
+      pinch.cx = (a.x + b.x) / 2; pinch.cy = (a.y + b.y) / 2;
       wrap.style.transformOrigin = `${pinch.ox}px ${pinch.oy}px`;
-      wrap.style.transform = `scale(${pinch.f})`;
+      wrap.style.transform = `translate(${pinch.cx - pinch.mx}px, ${pinch.cy - pinch.my}px) scale(${pinch.f})`;
     }
   });
   async function endPtr(e, cancelled) {
@@ -489,9 +564,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         const r0 = sc.getBoundingClientRect();
         const cx = (p.ox) / old, cy = (p.oy) / old; // page coords (css @ zoom 1)
         wrap.style.transform = ""; S.zoom = nz; await render();
-        sc.scrollLeft = cx * nz + 12 - (p.mx - r0.left); sc.scrollTop = cy * nz + 12 - (p.my - r0.top);
+        const ex = p.cx ?? p.mx, ey = p.cy ?? p.my; // dos dedos: zoom y desplazamiento
+        sc.scrollLeft = cx * nz + 12 - (ex - r0.left); sc.scrollTop = cy * nz + 12 - (ey - r0.top);
       }
       return;
+    }
+    if (live) {
+      const L = live; live = null;
+      if (!cancelled && L.len > 12 && L.pts.length > 1) {
+        snapshot();
+        S.marks.push({ kind: "draw", id: Math.random().toString(36).slice(2, 9), shape: L.shape, col: L.col, page: L.page, pts: L.pts });
+        changed();
+      } else drawMarks();
+      tapStart = null; return;
     }
     if (drag) {
       const d = drag; drag = null;
@@ -528,10 +613,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     S.tool = b.dataset.tool;
     document.querySelectorAll(".tool").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
     sc.style.cursor = S.tool === "mano" ? "grab" : "crosshair";
-    sc.style.touchAction = S.tool === "mano" ? "none" : "";
-    if (S.tool === "mano") toast("Arrastra un círculo para moverlo. Tócalo para ver sus datos.");
+    syncTouch();
+    $("drawbar").hidden = S.tool !== "dibujo";
+    if (S.tool === "mano") toast("Arrastra un círculo, texto o dibujo para moverlo. Tócalo para ver sus datos.");
   });
   sc.style.cursor = "crosshair";
+  function syncTouch() { sc.style.touchAction = S.tool === "mano" || (S.tool === "dibujo" && S.drawMode !== "texto") ? "none" : ""; }
+  const paintCols = () => {
+    $("drawCols").innerHTML = Object.keys(TXT_COL).map(k => `<button type="button" data-col="${k}" aria-label="${k}" aria-pressed="${k === lastTxtCol}" style="background:${TXT_CSS[k]}"></button>`).join("");
+    $("drawCols").querySelectorAll("button").forEach(b => b.onclick = () => { lastTxtCol = b.dataset.col; paintCols(); });
+  };
+  paintCols();
+  document.querySelectorAll("#drawbar .modes button").forEach(b => b.onclick = () => {
+    S.drawMode = b.dataset.mode;
+    document.querySelectorAll("#drawbar .modes button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    syncTouch();
+    toast(S.drawMode === "texto" ? "Toca el plano donde va el texto" : "Dibuja con un dedo. Con dos dedos mueves y haces zoom.");
+  });
   $("undoBtn").onclick = () => {
     const s = S.undo.pop(); if (!s) return;
     const o = JSON.parse(s); S.marks = o.marks; S.nextN = o.nextN; changed();
@@ -639,7 +737,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const ta = $("txtIn"); setTimeout(() => ta.focus(), 50);
       $("okTx").onclick = () => {
         const text = ta.value.replace(/\s+$/, "");
-        lastTxtCol = col;
+        lastTxtCol = col; paintCols();
         if (!text) { if (m) { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); } closeSheet(); return; }
         snapshot();
         if (m) { m.text = text; m.col = col; }
@@ -651,7 +749,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     });
   }
   function openPrevSheet(prev) {
-    const n = S.marks.filter(m => !isTxt(m)).length;
+    const n = S.marks.filter(isCircle).length;
     sheet(`
       <h2>Recorrido del ${fmtFecha(prev.fecha)}</h2>
       <p class="note">${esc(prev.obra || "Obra")} · ${esc(prev.tecnico || "")} · ${n} salida${n === 1 ? "" : "s"} marcada${n === 1 ? "" : "s"}. ¿Qué quieres hacer?</p>
@@ -690,7 +788,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   /* ---------- export ---------- */
   async function buildPdf() {
-    const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+    const { PDFDocument, StandardFonts, rgb, degrees, LineCapStyle } = PDFLib;
     const pdf = await PDFDocument.load(S.bytes.slice(0), { ignoreEncryption: true });
     const font = await pdf.embedFont(StandardFonts.HelveticaBold);
     const fontR = await pdf.embedFont(StandardFonts.Helvetica);
@@ -701,6 +799,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const jp = await S.doc.getPage(p); const v1 = jp.getViewport({ scale: 1 });
       const rot = ((jp.rotate % 360) + 360) % 360, rpt = radiusFor(v1);
       for (const m of ms) {
+        if (isDraw(m)) {
+          const col = rgb(...(TXT_COL[m.col] || TXT_COL.Rojo)), th = rpt * 0.28;
+          for (let i = 0; i < m.pts.length - 1; i++) pg.drawLine({ start: { x: m.pts[i][0], y: m.pts[i][1] }, end: { x: m.pts[i + 1][0], y: m.pts[i + 1][1] }, thickness: th, color: col, lineCap: LineCapStyle.Round });
+          if (m.shape === "flecha" && m.pts.length > 1) {
+            const e = m.pts[m.pts.length - 1], hs = arrowHead(m.pts[m.pts.length - 2], e, rpt * 1.4);
+            hs.forEach(h => pg.drawLine({ start: { x: e[0], y: e[1] }, end: { x: h[0], y: h[1] }, thickness: th, color: col, lineCap: LineCapStyle.Round }));
+          }
+          continue;
+        }
         if (isTxt(m)) {
           const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
           m.text.split("\n").forEach((l, i) => {
@@ -739,7 +846,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       p.drawRectangle({ x: M, y: H - M - 30, width: W - 2 * M, height: 1.5, color: BLUE });
       return H - M - 54;
     };
-    const circ = S.marks.filter(m => !isTxt(m)), notas = S.marks.filter(isTxt);
+    const circ = S.marks.filter(isCircle), notas = S.marks.filter(isTxt);
     const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
     const total = circ.length || 1, pct = k => Math.round(cnt[k] * 100 / total);
     const ORDER = ["verde", "azul", "amarillo", "rojo"];
