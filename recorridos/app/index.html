@@ -195,7 +195,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 5;
+  const APP_VERSION = 6;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -273,7 +273,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   async function startSession(bytes, marks, meta, page, askMeta) {
     S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
-    S.nextN = marks.reduce((a, m) => Math.max(a, m.n || 0), 0) + 1;
+    renumber();
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
     S.pages = S.doc.numPages; S.page = Math.min(page || 1, S.pages);
     $("empty").hidden = true; $("scroller").hidden = false; $("tray").hidden = false;
@@ -359,7 +359,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   /* ---------- editing ---------- */
   function snapshot() { S.undo.push(JSON.stringify({ marks: S.marks, nextN: S.nextN })); if (S.undo.length > 60) S.undo.shift(); }
-  function changed() { drawMarks(); saveDraft(); }
+  // Numeración corrida 1, 2, 3… sin huecos: al borrar una salida, las siguientes se recorren.
+  function renumber() {
+    const circ = S.marks.filter(m => !isTxt(m)).sort((a, b) => a.n - b.n);
+    circ.forEach((m, i) => { m.n = i + 1; });
+    S.nextN = circ.length + 1;
+  }
+  function changed() { renumber(); drawMarks(); saveDraft(); }
   function hitTest(px, py, want) {
     const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 })); let best = null, bd = Infinity;
     for (const m of S.marks) {
