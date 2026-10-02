@@ -6,16 +6,19 @@ guardada en Odoo y dibujada en AutoCAD de forma automática.
 ## Flujo
 
 ```
-1. AutoCAD   → AUTOMA.lsp numera las salidas sin ID y exporta la lista (CSV)
-2. Odoo      → importas la lista de salidas a la obra (una sola vez por obra)
-3. Técnico   → en su celular marca cada salida 🔴 🟡 🟢 (+ motivo, nota, foto)
-4. Odoo      → importas el recorrido; cada salida queda con su status y su historial
-5. AutoCAD   → un comando lee el CSV y dibuja los círculos de color con su nota
-6. Odoo      → PDF de pendientes para la obra (lo que le toca al contratista)
+1. Mauricio  → manda el PDF del plano al técnico
+2. Técnico   → lo abre en la página de recorridos (recorrido.html), elige
+               🔴 🟡 🟢 y toca cada salida para encerrarla en un círculo
+3. Técnico   → descarga el PDF marcado (con hoja de pendientes) y lo manda
+4. Mauricio  → lo adjunta en la cotización de Odoo
+5. Mes sig.  → el técnico abre el PDF del recorrido anterior: aparecen los
+               círculos y solo cambia los que avanzaron
 ```
 
-Los técnicos **no necesitan usuario de Odoo**: capturan en una página web
-sencilla desde el celular. Solo tú entras a Odoo.
+El PDF descargado lleva dentro el plano original y los datos de los círculos,
+por eso al volver a abrirlo se pueden seguir editando.
+
+Página publicada: https://claude.ai/artifact/GDhe1PGb6VwL19Dxkr1e7z
 
 ## Status de cada salida
 
@@ -34,23 +37,6 @@ Motivos del amarillo:
 - Otro (con nota)
 
 Responsable: **Automa** o **Obra** (contratista / albañil).
-
-## ID de cada salida
-
-El ID es la etiqueta que pone `AUTOMA.lsp`: `Prefijo #N` (p. ej. `Cam #3`,
-`Bot4 #12`). Es único **por obra**. Las salidas sin etiqueta se numeran con un
-comando nuevo del LISP antes de exportar.
-
-## Formato CSV del recorrido
-
-Lo genera la página del técnico; lo leen Odoo (importar) y AutoCAD (círculos).
-
-```csv
-obra,fecha,tecnico,salida,planta,status,motivo,responsable,nota
-Altezza GH,2026-09-29,Juan,Cam #3,PB,amarillo,Caja mal puesta,Obra,"Caja 5 cm abajo"
-Altezza GH,2026-09-29,Juan,Bot4 #12,PA,verde,,,
-Altezza GH,2026-09-29,Juan,Vid #2,PB,rojo,,,
-```
 
 ## Configuración en Odoo 19 (Studio)
 
@@ -128,7 +114,5 @@ amarillo/rojo y responsable **Obra** (Salida, Planta, Motivo, Nota, Foto).
 
 ## Pendiente
 
-- [ ] Comando LISP: numerar salidas sin ID y exportar lista de salidas (CSV)
-- [ ] Comando LISP: dibujar círculos de status desde el CSV del recorrido
-- [ ] Página de captura para técnicos (celular)
-- [ ] Configurar Studio según esta guía
+- [ ] Compartir la página con los técnicos y probar en obra
+- [ ] (Opcional) Configurar Studio según esta guía para llevar el historial en Odoo
