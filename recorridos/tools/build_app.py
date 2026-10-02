@@ -144,7 +144,47 @@ R('''  function openTextSheet(m, at) {''', '''  function pickPhoto(cb) {
     });
   }
   function openTextSheet(m, at) {''')
-R('''${m.n} · ${esc(label(m))}</text></g>`);''', '''${m.n} · ${esc(label(m))}${m.fotos && m.fotos.length ? " 📷" : ""}</text></g>`);''')
+R('''${m.n} · ${esc(label(m))}</text></g>`);''', '''${m.n} · ${esc(label(m))}</text>${m.fotos && m.fotos.length ? camBadge(x - r - Math.max(8, r * 0.6) - 2, y, Math.max(8, r * 0.6), m.fotos.length) : ""}</g>`);''')
+# camera badge (overlay) + quick photo button
+R('''  function refreshHeader() {''', '''  function camBadge(cx, cy, b, n) {
+    return `<g aria-label="${n} foto${n > 1 ? "s" : ""}"><circle cx="${cx}" cy="${cy}" r="${b}" fill="#1072b8" stroke="#fff" stroke-width="${b * 0.18}"/>` +
+      `<rect x="${cx - b * 0.55}" y="${cy - b * 0.32}" width="${b * 1.1}" height="${b * 0.72}" rx="${b * 0.12}" fill="#fff"/>` +
+      `<rect x="${cx - b * 0.2}" y="${cy - b * 0.48}" width="${b * 0.4}" height="${b * 0.2}" rx="${b * 0.05}" fill="#fff"/>` +
+      `<circle cx="${cx}" cy="${cy + b * 0.04}" r="${b * 0.22}" fill="#1072b8"/>` +
+      (n > 1 ? `<text x="${cx}" y="${cy + b * 1.85}" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="${b * 0.95}" fill="#1072b8" stroke="#fff" stroke-width="${b * 0.25}" paint-order="stroke">${n}</text>` : "") + `</g>`;
+  }
+  let quickT = 0;
+  function offerPhoto(m) {
+    const q = $("quickFoto"); clearTimeout(quickT);
+    q.textContent = `📷 Foto para salida ${m.n}`; q.hidden = false;
+    q.onclick = () => { q.hidden = true; pickPhoto(async f => {
+      try { const d = await shrinkPhoto(f); snapshot(); m.fotos = (m.fotos || []).concat(d); changed(); toast(`Foto agregada a la salida ${m.n}`); }
+      catch (e) { toast("No se pudo leer la foto"); }
+    }); };
+    quickT = setTimeout(() => { q.hidden = true; }, 6000);
+  }
+  function refreshHeader() {''')
+R('''    <div class="busy" id="busy" hidden>Cargando plano…</div>''', '''    <button class="quickfoto" id="quickFoto" type="button" hidden></button>
+    <div class="busy" id="busy" hidden>Cargando plano…</div>''')
+R('''.sheet .stack{display:flex;flex-direction:column;gap:10px}''', '''.quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#1072b8;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
+.sheet .stack{display:flex;flex-direction:column;gap:10px}''')
+R('''      changed();
+      if (S.tool === "amarillo") openMarkSheet(hit, true);
+      return;''', '''      changed();
+      if (S.tool === "amarillo") openMarkSheet(hit, true); else offerPhoto(hit);
+      return;''')
+R('''    S.marks.push(m); changed();
+    if (S.tool === "amarillo") openMarkSheet(m, true);''', '''    S.marks.push(m); changed();
+    if (S.tool === "amarillo") openMarkSheet(m, true); else offerPhoto(m);''')
+R('''  function onTap(px, py) {''', '''  function onTap(px, py) {
+    clearTimeout(quickT); $("quickFoto").hidden = true;''')
+# PDF badge
+R('''        pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });''', '''        pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
+        if (m.fotos && m.fotos.length) {
+          const [bx, by] = v1.convertToPdfPoint(vx - rpt * 1.75, vy);
+          pg.drawCircle({ x: bx, y: by, size: rpt * 0.55, color: rgb(0.06, 0.45, 0.72), borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.08 });
+          pg.drawCircle({ x: bx, y: by, size: rpt * 0.22, borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.1 });
+        }''')
 
 # ---- photos in PDF ----
 R('''    sp.drawText("Automa · Abre este PDF en la página de recorridos para continuar el siguiente recorrido."''', '''    const conFoto = circ.filter(m => m.fotos && m.fotos.length).sort((a, b) => a.n - b.n);
