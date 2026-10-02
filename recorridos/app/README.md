@@ -20,20 +20,16 @@ Después se abre siempre desde el ícono **Recorridos**, con o sin señal.
 
 ## Actualizar la app
 
-`index.html` se genera desde `../recorrido.html` (la versión de claude.ai):
-
-```bash
-python3 recorridos/tools/build_app.py
-```
-
-Luego sube `VERSION` en `sw.js` (p. ej. `recorridos-v2`) para que los
-celulares descarguen la versión nueva la próxima vez que tengan señal.
+`index.html` es la fuente de la app. Después de cualquier cambio sube
+`VERSION` en `sw.js` y `APP_VERSION` en `index.html`. Los celulares reciben la
+versión nueva la próxima vez que abren la app con internet (se recarga sola).
 
 ## Contenido
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` | La app |
+| `index.html` | La app (portada, resumen, planos marcados y fotos en el PDF) |
+| `logo.png` | Logo de Automa para las hojas del PDF |
 | `sw.js` | Guarda la app en el celular para usarla sin internet |
 | `manifest.webmanifest`, `icons/` | Nombre e ícono al instalarla |
 | `lib/` | pdf.js 3.11.174 (Apache-2.0) y pdf-lib 1.17.1 (MIT) |

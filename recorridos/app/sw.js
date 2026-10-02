@@ -1,10 +1,12 @@
-// Guarda la app completa en el celular para que funcione sin internet.
-// Al cambiar cualquier archivo de la app, sube VERSION para que se actualice.
-const VERSION = "recorridos-v4";
+// Guarda la app en el celular para que funcione sin internet.
+// La página se busca primero en internet (para recibir actualizaciones) y, si no hay señal,
+// se usa la copia guardada. Al cambiar cualquier archivo de la app, sube VERSION.
+const VERSION = "recorridos-v5";
 const FILES = [
   "./",
   "index.html",
   "manifest.webmanifest",
+  "logo.png",
   "lib/pdf.min.js",
   "lib/pdf.worker.min.js",
   "lib/pdf-lib.min.js",
@@ -20,7 +22,7 @@ const FILES = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -32,9 +34,21 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request).catch(() =>
-      e.request.mode === "navigate" ? caches.match("index.html") : Response.error()))
-  );
+  const req = e.request;
+  if (req.method !== "GET") return;
+  if (req.mode === "navigate") {
+    // Primero internet (con límite de 4 s), luego la copia guardada.
+    e.respondWith((async () => {
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch(req, { cache: "no-store", signal: ctrl.signal }); clearTimeout(t);
+        if (res.ok) (await caches.open(VERSION)).put("index.html", res.clone());
+        return res;
+      } catch (err) {
+        return (await caches.match("index.html")) || (await caches.match("./")) || Response.error();
+      }
+    })());
+    return;
+  }
+  e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req)));
 });
