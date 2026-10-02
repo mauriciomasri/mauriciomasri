@@ -31,7 +31,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .counts{display:flex;gap:6px;font-family:var(--f-label);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
 .counts span{display:flex;align-items:center;gap:4px}
 .dot{width:12px;height:12px;border-radius:50%;border:2.5px solid currentColor;display:inline-block}
-.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-verde{color:var(--verde)}
+.c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-verde{color:var(--verde)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:600}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn:disabled{opacity:.45;cursor:default}
@@ -67,9 +67,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .tool .ring{width:24px;height:24px;border-radius:50%;border:4px solid currentColor}
 .tool[aria-pressed="true"]{border-color:currentColor;background:var(--panel)}
 .tool.t-rojo{color:var(--rojo)}.tool.t-amarillo{color:var(--amarillo-ink)}.tool.t-amarillo .ring{border-color:var(--amarillo)}.tool.t-verde{color:var(--verde)}
-.tool.t-mano,.tool.t-borrar{color:var(--muted);flex:.85}
+.tool.t-mano,.tool.t-borrar,.tool.t-texto{color:var(--muted);flex:.85}
 .tool .ico{font-size:20px;line-height:24px}
-.tool[aria-pressed="true"].t-mano,.tool[aria-pressed="true"].t-borrar{color:var(--ink)}
+.tool[aria-pressed="true"].t-mano,.tool[aria-pressed="true"].t-borrar,.tool[aria-pressed="true"].t-texto{color:var(--ink)}
 
 /* bottom sheet */
 .scrim{position:fixed;inset:0;background:rgba(10,15,20,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
@@ -88,7 +88,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .note{font-size:13px;color:var(--muted);line-height:1.45}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
-@media (max-width:420px){.counts{font-size:14px;gap:4px}.top{gap:8px;padding-inline:12px}.tool{font-size:13px}.top .btn{padding:8px 10px}}
+@media (max-width:420px){.counts{font-size:14px;gap:4px}.top{gap:8px;padding-inline:12px}.tool{font-size:13px;overflow:hidden}.top .btn{padding:8px 10px}}
 </style>
 
 <div class="app">
@@ -143,6 +143,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <button class="tool t-rojo" data-tool="rojo" aria-pressed="true" type="button"><i class="ring"></i>Falta tubo</button>
     <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
     <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Listo</button>
+    <button class="tool t-texto" data-tool="texto" aria-pressed="false" type="button"><span class="ico" style="font-family:var(--f-label);font-weight:700">Aa</span>Texto</button>
     <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
     <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
   </nav>
@@ -167,6 +168,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   };
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
   const RESP = ["Automa", "Obra"];
+  const TXT_COL = { Negro: [0.1, 0.1, 0.1], Rojo: [0.80, 0.12, 0.10], Amarillo: [0.62, 0.45, 0.00], Verde: [0.08, 0.50, 0.20] };
+  const TXT_CSS = { Negro: "var(--ink)", Rojo: "var(--rojo)", Amarillo: "#9e7300", Verde: "var(--verde)" };
+  const isTxt = m => m.kind === "txt";
+  let lastTxtCol = "Negro";
   // circle radius in PDF points, proportional to the sheet so it matches the hand-drawn size
   const radiusFor = v1 => 0.0055 * Math.max(v1.width, v1.height);
 
@@ -230,7 +235,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   async function startSession(bytes, marks, meta, page, askMeta) {
     S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
-    S.nextN = marks.reduce((a, m) => Math.max(a, m.n), 0) + 1;
+    S.nextN = marks.reduce((a, m) => Math.max(a, m.n || 0), 0) + 1;
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
     S.pages = S.doc.numPages; S.page = Math.min(page || 1, S.pages);
     $("empty").hidden = true; $("scroller").hidden = false; $("tray").hidden = false;
@@ -275,6 +280,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const m of S.marks) {
       if (m.page !== S.page) continue;
       const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
+      if (isTxt(m)) {
+        const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
+        out.push(`<text data-id="${m.id}" x="${x}" y="${y}" font-family="Barlow, Arial, sans-serif" font-weight="600" font-size="${fs}" fill="${TXT_CSS[m.col] || TXT_CSS.Negro}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">` +
+          lines.map((l, i) => `<tspan x="${x}" dy="${i ? fs * 1.15 : 0}">${esc(l)}</tspan>`).join("") + `</text>`);
+        continue;
+      }
       const r = Math.max(6, rpt * k), c = `var(--${m.st})`;
       const fs = Math.max(8, rpt * 0.7 * k);
       out.push(`<g data-id="${m.id}"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="${Math.max(2, rpt * 0.22 * k)}"/>` +
@@ -282,7 +293,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     }
     $("ov").innerHTML = out.join("");
     const c = { rojo: 0, amarillo: 0, verde: 0 };
-    S.marks.forEach(m => c[m.st]++);
+    S.marks.forEach(m => { if (!isTxt(m)) c[m.st]++; });
     $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nV").textContent = c.verde;
     $("undoBtn").disabled = !S.undo.length;
   }
@@ -294,19 +305,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   /* ---------- editing ---------- */
   function snapshot() { S.undo.push(JSON.stringify({ marks: S.marks, nextN: S.nextN })); if (S.undo.length > 60) S.undo.shift(); }
   function changed() { drawMarks(); saveDraft(); }
-  function hitTest(px, py) {
+  function hitTest(px, py, want) {
     const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 })); let best = null, bd = Infinity;
     for (const m of S.marks) {
       if (m.page !== S.page) continue;
+      if (want === "circle" && isTxt(m)) continue;
       const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
+      if (isTxt(m)) {
+        const fs = Math.max(10, rpt * k), lines = m.text.split("\n");
+        const w = Math.max(...lines.map(l => l.length)) * fs * 0.55, h = lines.length * fs * 1.15;
+        if (px >= x - 6 && px <= x + w + 6 && py >= y - fs - 6 && py <= y - fs + h + 6) { best = m; bd = -1; }
+        continue;
+      }
       const d = Math.hypot(px - x, py - y);
       if (d < Math.max(rpt * k + 6, 18) && d < bd) { best = m; bd = d; }
     }
     return best;
   }
   function onTap(px, py) {
-    const hit = hitTest(px, py);
-    if (S.tool === "mano") { if (hit) openMarkSheet(hit, false); return; }
+    const colorTool = S.tool in ST;
+    const hit = hitTest(px, py, colorTool ? "circle" : "any");
+    if (S.tool === "mano" || (S.tool === "texto" && hit)) { if (hit) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
+    if (S.tool === "texto") { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
     if (S.tool === "borrar") {
       if (hit) { snapshot(); S.marks = S.marks.filter(m => m !== hit); changed(); }
       return;
@@ -446,6 +466,32 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
     });
   }
+  function openTextSheet(m, at) {
+    let col = m ? m.col : lastTxtCol;
+    sheet(`
+      <h2>${m ? "Editar texto" : "Agregar texto"}</h2>
+      <div class="field"><label class="lbl" for="txtIn">Texto</label>
+        <textarea id="txtIn" placeholder="Ej. Salida nueva por petición del cliente">${m ? esc(m.text) : ""}</textarea></div>
+      <div class="field"><label class="lbl">Color</label>${chips("col", Object.keys(TXT_COL), col)}</div>
+      <div class="row">
+        ${m ? `<button type="button" class="btn danger" id="delTx">Borrar texto</button>` : ""}
+        <button type="button" class="btn primary" id="okTx">Listo</button>
+      </div>`, () => {
+      bindChips($("sheetHost"), "col", v => col = v);
+      const ta = $("txtIn"); setTimeout(() => ta.focus(), 50);
+      $("okTx").onclick = () => {
+        const text = ta.value.replace(/\s+$/, "");
+        lastTxtCol = col;
+        if (!text) { if (m) { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); } closeSheet(); return; }
+        snapshot();
+        if (m) { m.text = text; m.col = col; }
+        else S.marks.push({ kind: "txt", id: Math.random().toString(36).slice(2, 9), page: S.page, x: at.x, y: at.y, text, col });
+        changed(); closeSheet();
+      };
+      const del = $("delTx");
+      if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
+    });
+  }
   function openMetaSheet() {
     sheet(`
       <h2>Datos del recorrido</h2>
@@ -478,6 +524,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const jp = await S.doc.getPage(p); const v1 = jp.getViewport({ scale: 1 });
       const rot = ((jp.rotate % 360) + 360) % 360, rpt = radiusFor(v1);
       for (const m of ms) {
+        if (isTxt(m)) {
+          const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
+          m.text.split("\n").forEach((l, i) => {
+            const [tx, ty] = v1.convertToPdfPoint(vx, vy + i * rpt * 1.15);
+            pg.drawText(safe(l), { x: tx, y: ty, size: rpt, font, color: rgb(...(TXT_COL[m.col] || TXT_COL.Negro)), rotate: degrees(rot) });
+          });
+          continue;
+        }
         const c = ST[m.st];
         pg.drawCircle({ x: m.x, y: m.y, size: rpt, borderColor: rgb(...c.rgb), borderWidth: rpt * 0.22 });
         const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
@@ -488,11 +542,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     // summary page
     const W = 842, H = 595, M = 40;
     let sp = pdf.addPage([W, H]), y = H - M;
-    const cnt = { rojo: 0, amarillo: 0, verde: 0 }; S.marks.forEach(m => cnt[m.st]++);
-    const total = S.marks.length || 1;
+    const circ = S.marks.filter(m => !isTxt(m)), notas = S.marks.filter(isTxt);
+    const cnt = { rojo: 0, amarillo: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
+    const total = circ.length || 1;
     sp.drawText(safe(`Recorrido de obra - ${S.meta.obra}`), { x: M, y: y - 6, size: 18, font });
     y -= 26;
-    sp.drawText(safe(`Fecha: ${fmtFecha(S.meta.fecha)}    Técnico: ${S.meta.tecnico || "-"}    Salidas revisadas: ${S.marks.length}`), { x: M, y, size: 10, font: fontR });
+    sp.drawText(safe(`Fecha: ${fmtFecha(S.meta.fecha)}    Técnico: ${S.meta.tecnico || "-"}    Salidas revisadas: ${circ.length}`), { x: M, y, size: 10, font: fontR });
     y -= 26;
     let x = M;
     for (const k of ["verde", "amarillo", "rojo"]) {
@@ -503,7 +558,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       x += font.widthOfTextAtSize(t, 11) + 40;
     }
     y -= 30;
-    const pend = S.marks.filter(m => m.st !== "verde").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
+    const pend = circ.filter(m => m.st !== "verde").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
     const cols = [M, M + 34, M + 150, M + 330, M + 410];
     const head = () => {
       ["#", "Status", "Qué falta", "Responsable", "Nota"].forEach((h, i) => sp.drawText(h, { x: cols[i], y, size: 9, font }));
@@ -524,6 +579,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         y -= 14;
       }
     }
+    if (notas.length) {
+      y -= 16; if (y < M + 30) { sp = pdf.addPage([W, H]); y = H - M; }
+      sp.drawText("Notas en el plano", { x: M, y, size: 12, font }); y -= 18;
+      for (const m of notas) {
+        for (const l of (`Hoja ${m.page}: ` + m.text.replace(/\n/g, " ")).match(/.{1,140}(\s|$)/g) || []) {
+          if (y < M) { sp = pdf.addPage([W, H]); y = H - M; }
+          sp.drawText(safe(l.trim()), { x: M, y, size: 9, font: fontR }); y -= 13;
+        }
+      }
+    }
     sp.drawText("Automa · Abre este PDF en la página de recorridos para continuar el siguiente recorrido.", { x: M, y: 22, size: 7.5, font: fontR, color: rgb(.45, .45, .45) });
     await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
     await pdf.attach(new TextEncoder().encode(JSON.stringify({ v: 1, meta: S.meta, marks: S.marks })), "recorrido.json", { mimeType: "application/json", description: "Datos del recorrido" });
@@ -537,7 +602,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return `Rec_${ob}_${d}${m}${y.slice(2)}.pdf`;
   }
   $("saveBtn").onclick = async () => {
-    if (!S.marks.length) { toast("Aún no hay círculos en el plano"); return; }
+    if (!S.marks.length) { toast("Aún no hay nada marcado en el plano"); return; }
     if (!S.meta.tecnico) { openMetaSheet(); toast("Pon tu nombre antes de descargar"); return; }
     const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Generando…";
     try {
