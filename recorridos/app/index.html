@@ -200,7 +200,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 12;
+  const APP_VERSION = 13;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -801,11 +801,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
     }
 
-    // Fotos: cuadrícula de 7 x 3, todas cuadradas del mismo tamaño
-    const conFoto = circ.filter(m => m.fotos && m.fotos.length).sort((a, b) => a.n - b.n);
-    const COLS = 7, ROWS = 3, GAP = 10, CAP = 24;
+    // Fotos: agrupadas por color (rojo, amarillo, verde) y dentro de cada color por número.
+    // Cuadrícula de 7 columnas, todas cuadradas del mismo tamaño.
+    const COLS = 7, GAP = 10, CAP = 22, GH = 22, BOTTOM = 40;
     const cell = (W - 2 * M - GAP * (COLS - 1)) / COLS;
-    let idx = COLS * ROWS, fp = null, top0 = 0;
     const wrap2 = (t, size, maxW) => {
       const words = safe(t).split(" "), lines = [""];
       for (const w of words) {
@@ -816,21 +815,36 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       return lines;
     };
-    for (const m of conFoto) {
-      for (const f of m.fotos) {
-        if (idx === COLS * ROWS) { fp = back(); idx = 0; top0 = header(fp, "Fotos del recorrido") + 14; }
-        const img = await pdf.embedJpg(await squareJpeg(f));
-        const col = idx % COLS, row = Math.floor(idx / COLS);
-        const x0 = M + col * (cell + GAP), top = top0 - row * (cell + CAP + GAP);
-        fp.drawImage(img, { x: x0, y: top - cell, width: cell, height: cell });
-        const c = ST[m.st];
-        fp.drawRectangle({ x: x0, y: top - cell, width: cell, height: 3, color: rgb(...c.rgb) });
-        fp.drawText(`${m.n}`, { x: x0, y: top - cell - 11, size: 8, font, color: rgb(...c.text) });
-        const desc = m.st === "amarillo" ? (m.mot || "Detalle") + (m.nota ? " - " + m.nota : "") : c.name + (m.nota ? " - " + m.nota : "");
-        const nW = font.widthOfTextAtSize(`${m.n}`, 8) + 4;
-        wrap2(desc, 6.5, cell - nW).forEach((l, k) => fp.drawText(l, { x: x0 + nW, y: top - cell - 11 - k * 8, size: 6.5, font: fontR, color: GRAY }));
-        idx++;
+    const groups = ["rojo", "amarillo", "verde"].map(k => ({
+      k, items: circ.filter(m => m.st === k && m.fotos && m.fotos.length).sort((a, b) => a.n - b.n).flatMap(m => m.fotos.map(f => ({ m, f })))
+    })).filter(g => g.items.length);
+    let fp = null, fy = 0;
+    const photoPage = () => { fp = back(); fy = header(fp, "Fotos del recorrido") + 6; };
+    const groupHead = (g, cont) => {
+      const c = ST[g.k], n = g.items.length;
+      fp.drawCircle({ x: M + 6, y: fy - 7, size: 5, borderColor: rgb(...c.rgb), borderWidth: 2 });
+      fp.drawText(safe(`${c.name}  ·  ${n} foto${n > 1 ? "s" : ""}${cont ? "  (cont.)" : ""}`), { x: M + 18, y: fy - 11, size: 11, font, color: rgb(...c.text) });
+      fy -= GH;
+    };
+    for (const g of groups) {
+      if (!fp || fy - GH - cell - CAP < BOTTOM) photoPage();
+      groupHead(g, false);
+      for (let r = 0; r < g.items.length; r += COLS) {
+        if (fy - cell - CAP < BOTTOM) { photoPage(); groupHead(g, true); }
+        for (let ci = 0; ci < COLS && r + ci < g.items.length; ci++) {
+          const { m, f } = g.items[r + ci], c = ST[m.st];
+          const img = await pdf.embedJpg(await squareJpeg(f));
+          const x0 = M + ci * (cell + GAP);
+          fp.drawImage(img, { x: x0, y: fy - cell, width: cell, height: cell });
+          fp.drawRectangle({ x: x0, y: fy - cell, width: cell, height: 3, color: rgb(...c.rgb) });
+          fp.drawText(`${m.n}`, { x: x0, y: fy - cell - 11, size: 8, font, color: rgb(...c.text) });
+          const desc = m.st === "amarillo" ? (m.mot || "Detalle") + (m.nota ? " - " + m.nota : "") : c.name + (m.nota ? " - " + m.nota : "");
+          const nW = font.widthOfTextAtSize(`${m.n}`, 8) + 4;
+          wrap2(desc, 6.5, cell - nW).forEach((l, k) => fp.drawText(l, { x: x0 + nW, y: fy - cell - 11 - k * 8, size: 6.5, font: fontR, color: GRAY }));
+        }
+        fy -= cell + CAP + GAP;
       }
+      fy -= 6;
     }
 
     // Pie de página en las hojas de Automa
