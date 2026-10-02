@@ -107,7 +107,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sheet .row .btn{flex:1;padding:12px}
 .btn.danger{color:var(--rojo)}
 .note{font-size:13px;color:var(--muted);line-height:1.45}
-.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.toast{pointer-events:none;position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 @media (max-width:420px){.counts{font-size:13px;gap:3px}.counts .dot{width:10px;height:10px;border-width:2px}.top{gap:6px;padding-inline:10px}.tray{gap:4px;padding-inline:6px}.tool{font-size:12px;overflow:hidden;padding-inline:0;letter-spacing:0}.tool .ring{width:20px;height:20px;border-width:3.5px}.top .btn{padding:8px 10px}}
 .top{padding-top:calc(8px + env(safe-area-inset-top,0px))}
@@ -121,7 +121,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .addfoto span{font-size:22px;line-height:1}
 .drawbar{position:absolute;top:58px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 8px;box-shadow:0 2px 10px rgba(0,0,0,.15);max-width:calc(100% - 24px)}
 .drawbar .modes{display:flex;gap:4px}
-.drawbar .modes button{display:flex;flex-direction:column;align-items:center;gap:0;border:1.5px solid transparent;background:var(--bg);border-radius:10px;padding:4px 8px;min-width:52px;font-family:var(--f-label);font-weight:600;font-size:12px;color:var(--ink)}
+.drawbar .modes button{display:flex;flex-direction:column;align-items:center;gap:0;border:1.5px solid transparent;background:var(--bg);border-radius:10px;padding:4px 6px;min-width:46px;font-family:var(--f-label);font-weight:600;font-size:12px;color:var(--ink)}
 .drawbar .modes button b{font-size:18px;line-height:20px}
 .drawbar .modes button[aria-pressed="true"]{border-color:var(--ink);background:var(--panel)}
 .drawbar .cols{display:flex;gap:10px}
@@ -194,6 +194,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <button type="button" data-mode="flecha" aria-pressed="true"><b>↗</b><span>Flecha</span></button>
         <button type="button" data-mode="linea" aria-pressed="false"><b>╱</b><span>Línea</span></button>
         <button type="button" data-mode="lapiz" aria-pressed="false"><b>〰</b><span>Lápiz</span></button>
+        <button type="button" data-mode="goma" aria-pressed="false"><b>◌</b><span>Goma</span></button>
       </div>
       <div class="cols" id="drawCols"></div>
     </div>
@@ -219,7 +220,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 16;
+  const APP_VERSION = 17;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -250,6 +251,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function today() { const d = new Date(); return d.toISOString().slice(0, 10); }
   function fmtFecha(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
   function toast(msg) {
+    document.querySelectorAll(".toast").forEach(x => x.remove());
     const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
     document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
   }
@@ -363,6 +365,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const strokes = S.marks.filter(m => isDraw(m) && m.page === S.page);
     if (live && live.page === S.page) strokes.push(live);
     for (const m of strokes) out.push(drawSvg(m, k, rpt));
+    if (erasing && erasing.pos) out.push(`<circle cx="${erasing.pos[0]}" cy="${erasing.pos[1]}" r="${eraseR(k, rpt)}" fill="rgba(255,255,255,.35)" stroke="#5b6876" stroke-width="1.5" stroke-dasharray="4 3"/>`);
     for (const m of S.marks) {
       if (m.page !== S.page || isDraw(m)) continue;
       const [x, y] = viewport.convertToViewportPoint(m.x, m.y);
@@ -415,7 +418,34 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   function changed() { renumber(); drawMarks(); saveDraft(); }
   // Dibujos (flecha, línea, lápiz): puntos en coordenadas del PDF.
-  let live = null;
+  let live = null, erasing = null;
+  const eraseR = (k, rpt) => Math.max(14, rpt * 1.3 * k);
+  // Goma: borra pedazos del lápiz; una flecha o línea que toca se borra completa.
+  function eraseAt(px, py) {
+    const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 })), Rr = eraseR(k, rpt);
+    let touched = false; const out = [];
+    for (const m of S.marks) {
+      if (!isDraw(m) || m.page !== S.page) { out.push(m); continue; }
+      const v = m.pts.map(p => viewport.convertToViewportPoint(p[0], p[1]));
+      let hit = false;
+      for (let i = 0; i < v.length - 1 && !hit; i++) if (distSeg([px, py], v[i], v[i + 1]) < Rr) hit = true;
+      if (!hit) { out.push(m); continue; }
+      if (!touched) { snapshot(); touched = true; }
+      if (m.shape !== "lapiz") continue;
+      // densificar y cortar el trazo donde pasa la goma
+      const dense = [];
+      for (let i = 0; i < v.length - 1; i++) {
+        const n = Math.max(1, Math.ceil(Math.hypot(v[i + 1][0] - v[i][0], v[i + 1][1] - v[i][1]) / 3));
+        for (let j = 0; j < n; j++) dense.push([v[i][0] + (v[i + 1][0] - v[i][0]) * j / n, v[i][1] + (v[i + 1][1] - v[i][1]) * j / n]);
+      }
+      dense.push(v[v.length - 1]);
+      let run = [];
+      const flush = () => { if (run.length > 1) out.push({ kind: "draw", id: Math.random().toString(36).slice(2, 9), shape: "lapiz", col: m.col, page: m.page, pts: run.map(q => viewport.convertToPdfPoint(q[0], q[1])) }); run = []; };
+      for (const q of dense) { if (Math.hypot(q[0] - px, q[1] - py) < Rr) flush(); else run.push(q); }
+      flush();
+    }
+    if (touched) { S.marks = out; erasing.changed = true; }
+  }
   const arrowHead = (a, b, h) => {
     const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), s = 0.5;
     return [[b[0] - h * Math.cos(ang - s), b[1] - h * Math.sin(ang - s)], [b[0] - h * Math.cos(ang + s), b[1] - h * Math.sin(ang + s)]];
@@ -503,7 +533,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       drag = { hit, x0: e.clientX, y0: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop, v0, moved: false, orig: hit && isDraw(hit) ? hit.pts.map(p => p.slice()) : null };
       try { sc.setPointerCapture(e.pointerId); } catch (err) {}
     }
-    if (ptrs.size === 1 && S.tool === "dibujo" && S.drawMode !== "texto" && viewport) {
+    if (ptrs.size === 1 && S.tool === "dibujo" && S.drawMode === "goma" && viewport) {
+      const r = $("cv").getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      erasing = { pos: [px, py], changed: false }; eraseAt(px, py); drawMarks();
+      try { sc.setPointerCapture(e.pointerId); } catch (err) {}
+    } else if (ptrs.size === 1 && S.tool === "dibujo" && S.drawMode !== "texto" && viewport) {
       const r = $("cv").getBoundingClientRect();
       live = { kind: "draw", shape: S.drawMode, col: lastTxtCol, page: S.page, pts: [viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top)], v0: [e.clientX, e.clientY], len: 0 };
       try { sc.setPointerCapture(e.pointerId); } catch (err) {}
@@ -511,6 +545,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (ptrs.size === 2) {
       if (drag && drag.moved && drag.hit) changed();
       if (live) { live = null; drawMarks(); }
+      if (erasing) { const ch = erasing.changed; erasing = null; ch ? changed() : drawMarks(); }
       drag = null;
       tapStart = null;
       const [a, b] = [...ptrs.values()];
@@ -522,6 +557,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   sc.addEventListener("pointermove", e => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (erasing && ptrs.size === 1) {
+      const r = $("cv").getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      erasing.pos = [px, py]; eraseAt(px, py); drawMarks();
+      return;
+    }
     if (live && ptrs.size === 1) {
       const r = $("cv").getBoundingClientRect();
       const pt = viewport.convertToPdfPoint(e.clientX - r.left, e.clientY - r.top);
@@ -568,6 +608,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         sc.scrollLeft = cx * nz + 12 - (ex - r0.left); sc.scrollTop = cy * nz + 12 - (ey - r0.top);
       }
       return;
+    }
+    if (erasing) {
+      const ch = erasing.changed; erasing = null;
+      ch ? changed() : drawMarks();
+      tapStart = null; return;
     }
     if (live) {
       const L = live; live = null;
@@ -628,7 +673,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     S.drawMode = b.dataset.mode;
     document.querySelectorAll("#drawbar .modes button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
     syncTouch();
-    toast(S.drawMode === "texto" ? "Toca el plano donde va el texto" : "Dibuja con un dedo. Con dos dedos mueves y haces zoom.");
+    $("drawCols").hidden = S.drawMode === "goma";
+    toast(S.drawMode === "texto" ? "Toca el plano donde va el texto" : S.drawMode === "goma" ? "Pasa el dedo sobre lo que quieras borrar" : "Dibuja con un dedo. Con dos dedos mueves y haces zoom.");
   });
   $("undoBtn").onclick = () => {
     const s = S.undo.pop(); if (!s) return;
