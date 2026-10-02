@@ -70,6 +70,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* empty state */
 .empty{position:absolute;inset:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 16px}
 .empty .card{max-width:440px;display:flex;flex-direction:column;gap:16px}
+.empty .brand{width:min(260px,70%);height:auto;align-self:center;margin-bottom:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .empty .brand{filter:invert(1) hue-rotate(180deg)}}
+:root[data-theme="dark"] .empty .brand{filter:invert(1) hue-rotate(180deg)}
 .empty h1{font-family:var(--f-label);font-size:30px;line-height:1.05;margin:0;text-wrap:balance}
 .empty p{margin:0;color:var(--muted);line-height:1.5}
 .steps{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:start;margin:0;padding:0;list-style:none}
@@ -140,6 +143,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <main class="stage" id="stage">
     <div class="empty" id="empty">
       <div class="card">
+        <img class="brand" src="logo.png" alt="Automa" width="1340" height="265">
         <h1>Marca el avance sobre el plano</h1>
         <ol class="steps">
           <li style="display:contents"><b>1</b><span>Abre el PDF del plano que te mandaron.</span></li>
@@ -195,7 +199,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 9;
+  const APP_VERSION = 10;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
