@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_recorrido_list" model="ir.ui.view">
+        <field name="name">x_automa_recorrido.list</field>
+        <field name="model">x_automa_recorrido</field>
+        <field name="arch" type="xml">
+            <list create="0" default_order="x_fecha desc, id desc">
+                <field name="x_fecha"/>
+                <field name="x_obra" string="Obra" decoration-bf="1"/>
+                <field name="x_order_id" optional="show"/>
+                <field name="x_partner_id" optional="hide"/>
+                <field name="x_tecnico" optional="show"/>
+                <field name="x_rojo" string="🔴" sum="Total" decoration-danger="x_rojo &gt; 0"/>
+                <field name="x_amarillo" string="🟡" sum="Total" decoration-warning="x_amarillo &gt; 0"/>
+                <field name="x_azul" string="🔵" sum="Total"/>
+                <field name="x_verde" string="🟢" sum="Total" decoration-success="x_verde &gt; 0"/>
+                <field name="x_total" optional="show"/>
+                <field name="x_pct_cableado" widget="progressbar" optional="show"/>
+                <field name="x_pct_terminado" widget="progressbar" optional="show"/>
+                <field name="x_pdf_name" column_invisible="1"/>
+                <field name="x_pdf" widget="binary" filename="x_pdf_name" string="PDF"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_recorrido_form" model="ir.ui.view">
+        <field name="name">x_automa_recorrido.form</field>
+        <field name="model">x_automa_recorrido</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <sheet>
+                    <div class="oe_title"><h1><field name="x_name"/></h1></div>
+                    <group>
+                        <group string="Obra">
+                            <field name="x_obra"/>
+                            <field name="x_order_id" options="{'no_create': True}"/>
+                            <field name="x_partner_id" options="{'no_create': True}"/>
+                            <field name="x_fecha"/>
+                            <field name="x_tecnico"/>
+                        </group>
+                        <group string="Avance">
+                            <field name="x_rojo"/>
+                            <field name="x_amarillo"/>
+                            <field name="x_azul"/>
+                            <field name="x_verde"/>
+                            <field name="x_total"/>
+                            <field name="x_pct_cableado" widget="progressbar"/>
+                            <field name="x_pct_terminado" widget="progressbar"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="x_pdf_name" invisible="1"/>
+                        <field name="x_pdf" widget="binary" filename="x_pdf_name" string="Descargar PDF"/>
+                    </group>
+                    <notebook>
+                        <page string="PDF" name="pdf">
+                            <field name="x_pdf" widget="pdf_viewer" readonly="1" nolabel="1"/>
+                        </page>
+                        <page string="Técnico" name="tecnico" groups="base.group_no_one">
+                            <group>
+                                <field name="x_app_uid" readonly="1"/>
+                                <field name="x_envios" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_recorrido_graph" model="ir.ui.view">
+        <field name="name">x_automa_recorrido.graph</field>
+        <field name="model">x_automa_recorrido</field>
+        <field name="arch" type="xml">
+            <graph type="line" string="Avance por fecha">
+                <field name="x_fecha" interval="month"/>
+                <field name="x_pct_terminado" type="measure"/>
+                <field name="x_pct_cableado" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="view_recorrido_search" model="ir.ui.view">
+        <field name="name">x_automa_recorrido.search</field>
+        <field name="model">x_automa_recorrido</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="x_obra" string="Obra" filter_domain="['|', '|', ('x_obra', 'ilike', self), ('x_order_id.name', 'ilike', self), ('x_partner_id.name', 'ilike', self)]"/>
+                <field name="x_order_id"/>
+                <field name="x_partner_id"/>
+                <field name="x_tecnico"/>
+                <filter name="sin_cotizacion" string="Sin cotización ligada" domain="[('x_order_id', '=', False)]"/>
+                <filter name="con_pendientes" string="Con pendientes (rojo o amarillo)" domain="['|', ('x_rojo', '&gt;', 0), ('x_amarillo', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="f_fecha" string="Fecha" date="x_fecha"/>
+                <group>
+                    <filter name="g_obra" string="Obra" context="{'group_by': 'x_obra'}"/>
+                    <filter name="g_order" string="Cotización" context="{'group_by': 'x_order_id'}"/>
+                    <filter name="g_tecnico" string="Técnico" context="{'group_by': 'x_tecnico'}"/>
+                    <filter name="g_mes" string="Mes" context="{'group_by': 'x_fecha:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_recorridos" model="ir.actions.act_window">
+        <field name="name">Recorridos</field>
+        <field name="res_model">x_automa_recorrido</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aquí llegan los recorridos de obra</p>
+            <p>Los técnicos marcan las salidas en el plano con la app y tocan <b>Enviar → Guardar en Odoo</b>.
+               Para conectar la app usa el menú <b>Conectar app de técnicos</b>.</p>
+        </field>
+    </record>
+
+    <!-- Cotización: botón con los recorridos de esa obra -->
+    <record id="view_order_form_recorridos" model="ir.ui.view">
+        <field name="name">sale.order.form.recorridos</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="%(action_recorridos)d" type="action" class="oe_stat_button" icon="fa-map-marker"
+                        context="{'search_default_x_order_id': id, 'default_x_order_id': id}" invisible="not x_recorrido_count">
+                    <field name="x_recorrido_count" widget="statinfo" string="Recorridos"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+    <menuitem id="menu_root" name="Recorridos" web_icon="automa_recorridos,static/description/icon.png" sequence="6"/>
+    <menuitem id="menu_recorridos" name="Recorridos" parent="menu_root" action="action_recorridos" sequence="1"/>
+    <menuitem id="menu_conectar" name="Conectar app de técnicos" parent="menu_root" action="action_conectar_app" sequence="9" groups="base.group_system"/>
+</odoo>

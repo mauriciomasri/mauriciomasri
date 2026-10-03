@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<!-- noupdate: la dirección del webhook (UUID) no cambia al actualizar el módulo -->
+<data noupdate="1">
+    <!-- La app de técnicos manda aquí el recorrido (JSON con el PDF en base64).
+         Si llega otra vez el mismo recorrido (mismo uid), se actualiza en lugar de duplicarse. -->
+    <record id="automation_webhook_recorrido" model="base.automation">
+        <field name="name">Recorridos: recibir desde la app de técnicos</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="trigger">on_webhook</field>
+        <field name="record_getter">model.search([('x_app_uid', '=', payload.get('uid') or 'sin-uid')], limit=1) or model.create({'x_name': 'Recorrido', 'x_app_uid': payload.get('uid') or False})</field>
+    </record>
+    <record id="action_webhook_recorrido" model="ir.actions.server">
+        <field name="name">Recorridos: guardar recorrido recibido</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="base_automation_id" ref="automation_webhook_recorrido"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">p = payload or {}
+obra = (p.get('obra') or '').strip()
+def num(k):
+    try:
+        return int(p.get(k) or 0)
+    except Exception:
+        return 0
+rojo, amarillo, azul, verde = num('rojo'), num('amarillo'), num('azul'), num('verde')
+total = rojo + amarillo + azul + verde
+fecha = p.get('fecha') or False
+vals = {
+    'x_name': ('Recorrido %s %s' % (obra, fecha or '')).strip(),
+    'x_obra': obra,
+    'x_fecha': fecha,
+    'x_tecnico': (p.get('tecnico') or '').strip(),
+    'x_rojo': rojo, 'x_amarillo': amarillo, 'x_azul': azul, 'x_verde': verde,
+    'x_total': total,
+    'x_pct_cableado': round(100.0 * (azul + verde) / total, 1) if total else 0.0,
+    'x_pct_terminado': round(100.0 * verde / total, 1) if total else 0.0,
+    'x_envios': (record.x_envios or 0) + 1,
+}
+if p.get('pdf'):
+    vals['x_pdf'] = p.get('pdf')
+    vals['x_pdf_name'] = p.get('archivo') or 'Recorrido.pdf'
+# Ligar con la cotización: por número (S00123), referencia del cliente o nombre del cliente.
+if not record.x_order_id and obra:
+    SO = env['sale.order']
+    orders = SO.search([('name', '=ilike', obra)], limit=2)
+    if not orders:
+        orders = SO.search(['|', '|', ('client_order_ref', 'ilike', obra), ('partner_id.name', 'ilike', obra), ('name', 'ilike', obra)], order='date_order desc', limit=2)
+    if len(orders) == 1:
+        vals['x_order_id'] = orders.id
+        vals['x_partner_id'] = orders.partner_id.id
+nuevo = not record.x_envios
+record.write(vals)
+resumen = 'Falta tubería %s · Detalle %s · Cableado OK %s · Terminado %s (%s salidas)' % (rojo, amarillo, azul, verde, total)
+bot = env.ref('base.partner_root').id
+record.message_post(body=('Recorrido recibido de la app' if nuevo else 'Recorrido corregido desde la app') + ': ' + resumen, author_id=bot)
+if record.x_order_id:
+    record.x_order_id.message_post(body='%s del %s (%s): %s' % ('Nuevo recorrido' if nuevo else 'Recorrido corregido', fecha or '', vals['x_tecnico'] or 'técnico', resumen), author_id=bot)
+</field>
+    </record>
+</data>
+
+<!-- Botón de menú: abre la app de técnicos ya conectada a este Odoo -->
+<data>
+    <record id="action_conectar_app" model="ir.actions.server">
+        <field name="name">Conectar app de técnicos</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="state">code</field>
+        <field name="code">rule = env.ref('automa_recorridos.automation_webhook_recorrido')
+action = {
+    'type': 'ir.actions.act_url',
+    'target': 'new',
+    'url': 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=' + (rule.url or ''),
+}
+</field>
+    </record>
+</data>
+</odoo>

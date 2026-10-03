@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+    <!-- Recorrido de obra (lo crea la app de técnicos por webhook) -->
+    <record id="model_x_automa_recorrido" model="ir.model">
+        <field name="name">Recorrido de obra</field>
+        <field name="model">x_automa_recorrido</field>
+        <field name="is_mail_thread" eval="True"/>
+        <field name="is_mail_activity" eval="True"/>
+    </record>
+    <record id="field_recorrido_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_name</field>
+        <field name="field_description">Recorrido</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_recorrido_obra" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_obra</field>
+        <field name="field_description">Obra (como la escribió el técnico)</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_recorrido_order" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_order_id</field>
+        <field name="field_description">Cotización</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">sale.order</field>
+        <field name="on_delete">set null</field>
+        <field name="index">True</field>
+    </record>
+    <record id="field_recorrido_partner" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_partner_id</field>
+        <field name="field_description">Cliente</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">res.partner</field>
+        <field name="on_delete">set null</field>
+    </record>
+    <record id="field_recorrido_fecha" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_fecha</field>
+        <field name="field_description">Fecha</field>
+        <field name="ttype">date</field>
+    </record>
+    <record id="field_recorrido_tecnico" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_tecnico</field>
+        <field name="field_description">Técnico</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_recorrido_rojo" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_rojo</field>
+        <field name="field_description">Falta tubería</field>
+        <field name="ttype">integer</field>
+    </record>
+    <record id="field_recorrido_amarillo" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_amarillo</field>
+        <field name="field_description">Detalle pendiente</field>
+        <field name="ttype">integer</field>
+    </record>
+    <record id="field_recorrido_azul" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_azul</field>
+        <field name="field_description">Tubería y cableado OK</field>
+        <field name="ttype">integer</field>
+    </record>
+    <record id="field_recorrido_verde" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_verde</field>
+        <field name="field_description">Terminado con equipo</field>
+        <field name="ttype">integer</field>
+    </record>
+    <record id="field_recorrido_total" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_total</field>
+        <field name="field_description">Salidas revisadas</field>
+        <field name="ttype">integer</field>
+    </record>
+    <record id="field_recorrido_cableado" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_pct_cableado</field>
+        <field name="field_description">% cableado</field>
+        <field name="ttype">float</field>
+    </record>
+    <record id="field_recorrido_terminado" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_pct_terminado</field>
+        <field name="field_description">% terminado</field>
+        <field name="ttype">float</field>
+    </record>
+    <record id="field_recorrido_pdf" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_pdf</field>
+        <field name="field_description">PDF del recorrido</field>
+        <field name="ttype">binary</field>
+    </record>
+    <record id="field_recorrido_pdf_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_pdf_name</field>
+        <field name="field_description">Nombre del PDF</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_recorrido_uid" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_app_uid</field>
+        <field name="field_description">ID en la app</field>
+        <field name="ttype">char</field>
+        <field name="index">True</field>
+        <field name="copied" eval="False"/>
+    </record>
+    <record id="field_recorrido_envios" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_envios</field>
+        <field name="field_description">Veces recibido</field>
+        <field name="ttype">integer</field>
+    </record>
+
+    <!-- Orden de la lista (después de crear el campo de fecha) -->
+    <record id="model_x_automa_recorrido" model="ir.model">
+        <field name="order">x_fecha desc, id desc</field>
+    </record>
+
+    <!-- En la cotización: lista de recorridos y contador -->
+    <record id="field_order_recorrido_ids" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_recorrido_ids</field>
+        <field name="field_description">Recorridos</field>
+        <field name="ttype">one2many</field>
+        <field name="relation">x_automa_recorrido</field>
+        <field name="relation_field">x_order_id</field>
+    </record>
+    <record id="field_order_recorrido_count" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_recorrido_count</field>
+        <field name="field_description">Número de recorridos</field>
+        <field name="ttype">integer</field>
+        <field name="store" eval="False"/>
+        <field name="depends">x_recorrido_ids</field>
+        <field name="compute">for rec in self:
+    rec['x_recorrido_count'] = len(rec.x_recorrido_ids)</field>
+    </record>
+
+    <!-- Permisos: usuarios internos -->
+    <record id="access_x_automa_recorrido_user" model="ir.model.access">
+        <field name="name">x_automa_recorrido usuarios</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+</data>
+</odoo>
