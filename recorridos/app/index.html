@@ -157,7 +157,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <span class="c-verde"><i class="dot"></i><b id="nV">0</b></span>
     </div>
     <button class="pendpill" id="pendPill" type="button" hidden></button>
-    <button class="btn primary" id="saveBtn" type="button" hidden>Enviar</button>
+    <button class="btn primary" id="saveBtn" type="button" hidden aria-label="Guardar en Odoo">Guardar</button>
   </header>
 
   <main class="stage" id="stage">
@@ -168,15 +168,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <ol class="steps">
           <li style="display:contents"><b>1</b><span>Abre el PDF del plano que te mandaron.</span></li>
           <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
-          <li style="display:contents"><b>3</b><span>Toca <strong>Enviar</strong> y manda el PDF marcado a Mauricio.</span></li>
+          <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
         </ol>
-        <p>Para editar un recorrido que ya enviaste desde este celular, ábrelo en <b>Mis recorridos</b>. Si te lo mandaron, usa <b>Cargar recorrido anterior</b> con el PDF.</p>
+        <p>Para corregir un recorrido o hacer el siguiente de la misma obra, ábrelo en <b>Mis recorridos</b>.</p>
         <div class="actions">
           <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
-          <button class="btn" id="prevBtn" type="button">Cargar recorrido anterior</button>
+          <button class="btn" id="prevBtn" type="button" hidden>Cargar recorrido anterior</button>
           <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
-          <button class="linkbtn" id="demoBtn" type="button">Probar con un plano de ejemplo</button>
+          <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
         </div>
         <div class="install" id="installHint" hidden>
           <b>Instálala para usarla sin internet</b>
@@ -232,7 +232,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 20;
+  const APP_VERSION = 21;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -823,8 +823,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <button type="button" class="btn primary" id="pvFix">Corregir ese recorrido</button>
         <button type="button" class="btn" id="pvNew">Empezar recorrido nuevo (hoy)</button>
       </div>
-      <p class="note"><b>Corregir</b> conserva la fecha del ${fmtFecha(prev.fecha)}. <b>Nuevo</b> usa la fecha de hoy y parte de los círculos de ese recorrido para que solo cambies los que avanzaron.</p>`, () => {
-      $("pvFix").onclick = () => { S.meta.fecha = prev.fecha; S.meta.tecnico = prev.tecnico || S.meta.tecnico; refreshHeader(); saveDraft(); closeSheet(); };
+      <p class="note">Las dos opciones usan la fecha de hoy y parten de los círculos de ese recorrido. En Odoo, el del ${fmtFecha(prev.fecha)} se queda guardado tal como estaba.</p>`, () => {
+      $("pvFix").onclick = () => { S.meta.fecha = today(); S.meta.tecnico = prev.tecnico || S.meta.tecnico; refreshHeader(); saveDraft(); closeSheet(); };
       $("pvNew").onclick = () => { S.meta.fecha = today(); S.meta.rid = newId(); refreshHeader(); saveDraft(); closeSheet(); openMetaSheet(true); };
     });
   }
@@ -1114,35 +1114,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   $("saveBtn").onclick = async () => {
     if (!S.marks.length) { toast("Aún no hay nada marcado en el plano"); return; }
-    if (!S.meta.tecnico || !S.meta.obra) { openMetaSheet(); toast("Completa obra y técnico antes de enviar"); return; }
-    const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Generando…";
-    let file;
-    try { file = await makeFile(); }
-    catch (e) { toast("No se pudo generar el PDF. Intenta de nuevo."); return; }
-    finally { btn.disabled = false; btn.textContent = "Enviar"; }
-    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-    sheet(`
-      <h2>PDF listo</h2>
-      <p class="note">${esc(file.name)} · ${(file.size / 1048576).toFixed(1)} MB</p>
-      <div class="stack">
-        ${getOdoo() ? `<button type="button" class="btn primary" id="odooBtn">Guardar en Odoo</button>` : ""}
-        ${canShare ? `<button type="button" class="btn${getOdoo() ? "" : " primary"}" id="shareBtn">Enviar por WhatsApp, correo…</button>` : ""}
-        <button type="button" class="btn${canShare || getOdoo() ? "" : " primary"}" id="dlBtn">Guardar en el celular</button>
-      </div>
-      <p class="note">${getOdoo() ? "Sin señal, <b>Guardar en Odoo</b> lo deja en espera y lo sube solo cuando vuelve el internet." : "Si no tienes señal, guárdalo y envíalo después. El recorrido también queda guardado en la app."}</p>`, () => {
-      const ob = $("odooBtn");
-      if (ob) ob.onclick = async () => {
-        ob.disabled = true; ob.textContent = "Guardando…";
-        try { await queueOdoo(file); } catch (e) { toast("No se pudo preparar el envío a Odoo"); }
-        closeSheet();
-      };
-      const sb = $("shareBtn");
-      if (sb) sb.onclick = async () => {
-        try { await navigator.share({ files: [file], title: file.name }); closeSheet(); toast("Enviado"); }
-        catch (e) { if (e && e.name !== "AbortError") toast("No se pudo compartir. Usa Guardar en el celular."); }
-      };
-      $("dlBtn").onclick = () => { downloadFile(file); closeSheet(); toast("PDF guardado en Descargas"); };
-    });
+    if (!S.meta.tecnico || !S.meta.obra) { openMetaSheet(); toast("Completa obra y técnico antes de guardar"); return; }
+    if (!getOdoo()) { openMetaSheet(); toast("Primero conecta la app con Odoo: pega el enlace que te mandó Mauricio"); return; }
+    const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Guardando…";
+    try { await queueOdoo(await makeFile()); }
+    catch (e) { toast("No se pudo generar el PDF. Intenta de nuevo."); }
+    finally { btn.disabled = false; btn.textContent = "Guardar"; }
   };
 
   /* ---------- salir al inicio ---------- */
