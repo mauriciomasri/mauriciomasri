@@ -170,10 +170,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
         </ol>
-        <p>Para corregir un recorrido o hacer el siguiente de la misma obra, ábrelo en <b>Mis recorridos</b>.</p>
+        <p>Para corregir un recorrido o hacer el siguiente de la misma obra, ábrelo en <b>Mis recorridos</b>. Si otro técnico te mandó su PDF, usa <b>Cargar recorrido anterior</b>.</p>
         <div class="actions">
           <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
-          <button class="btn" id="prevBtn" type="button" hidden>Cargar recorrido anterior</button>
+          <button class="btn" id="prevBtn" type="button">Cargar recorrido anterior</button>
           <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
@@ -232,7 +232,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 21;
+  const APP_VERSION = 22;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
