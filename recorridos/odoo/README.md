@@ -32,6 +32,15 @@ Guarda en Odoo los recorridos que hacen los técnicos con la app
    Si ya tenía la app instalada: **toca el nombre de la obra → Conexión con
    Odoo → pega el enlace**.
 
+## Corregir nombres de obra
+
+- **Renombrar**: abre la obra y cambia el nombre.
+- **Mover recorridos**: en la lista de Recorridos selecciónalos y cambia
+  **Obra** en uno; se aplica a todos los seleccionados. Luego borra la obra
+  que quedó vacía.
+- Los siguientes recorridos que lleguen con el mismo nombre mal escrito se
+  van solos a la obra correcta.
+
 ## Cómo se liga con la cotización
 
 Con el nombre de obra que escribe el técnico, el webhook busca **una sola**

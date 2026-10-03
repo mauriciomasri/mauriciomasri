@@ -46,6 +46,9 @@ obra = rec.x_obra_id
 if not obra and obra_txt:
     obra = Obra.search([('x_name', '=ilike', obra_txt)], limit=1)
     if not obra:
+        # Nombre mal escrito que ya se corrigió antes: usa la obra a la que se movió ese recorrido.
+        obra = env['x_automa_recorrido'].search([('x_obra', '=ilike', obra_txt), ('x_obra_id', '!=', False), ('id', '!=', rec.id)], order='id desc', limit=1).x_obra_id
+    if not obra:
         vo = {'x_name': obra_txt, 'x_estado': 'curso'}
         SO = env['sale.order']
         orders = SO.search([('name', '=ilike', obra_txt)], limit=2)
