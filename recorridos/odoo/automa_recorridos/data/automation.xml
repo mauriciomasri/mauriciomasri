@@ -114,6 +114,26 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
         <value eval="[ref('action_agrupar_obras')]"/>
     </function>
 
+    <!-- Obras vacías: si a una obra ya no le queda ningún recorrido (p. ej. se movió a la obra
+         correcta), se borra sola. -->
+    <record id="automation_borrar_obras_vacias" model="base.automation">
+        <field name="name">Recorridos: borrar obras sin recorridos</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_recorrido_obra_id')])]"/>
+    </record>
+    <record id="action_borrar_obras_vacias" model="ir.actions.server">
+        <field name="name">Recorridos: borrar obras vacías</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="base_automation_id" ref="automation_borrar_obras_vacias"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">env['x_automa_obra'].search([('x_recorrido_ids', '=', False)]).unlink()</field>
+    </record>
+    <function model="ir.actions.server" name="run">
+        <value eval="[ref('action_borrar_obras_vacias')]"/>
+    </function>
+
     <!-- Botón de menú: abre la app de técnicos ya conectada a este Odoo -->
     <record id="action_conectar_app" model="ir.actions.server">
         <field name="name">Conectar app de técnicos</field>
