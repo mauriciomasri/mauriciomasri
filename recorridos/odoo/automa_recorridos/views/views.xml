@@ -249,6 +249,10 @@
     </record>
 
     <menuitem id="menu_root" name="Recorridos" web_icon="automa_recorridos,static/description/icon.png" sequence="6" action="action_obras"/>
+    <!-- El ícono va incrustado en el menú para que el navegador no muestre una versión guardada vieja -->
+    <record id="menu_root" model="ir.ui.menu">
+        <field name="web_icon_data" type="base64" file="automa_recorridos/static/description/icon.png"/>
+    </record>
     <menuitem id="menu_obras" name="Obras" parent="menu_root" action="action_obras" sequence="1"/>
     <menuitem id="menu_recorridos" name="Recorridos" parent="menu_root" action="action_recorridos" sequence="2"/>
     <menuitem id="menu_conectar" name="Conectar app de técnicos" parent="menu_root" action="action_conectar_app" sequence="9" groups="base.group_system"/>
