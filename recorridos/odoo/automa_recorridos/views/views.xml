@@ -122,7 +122,7 @@
         <field name="name">x_automa_obra.list</field>
         <field name="model">x_automa_obra</field>
         <field name="arch" type="xml">
-            <list multi_edit="1" decoration-muted="x_estado == 'cancelado'">
+            <list create="0" multi_edit="1" decoration-muted="x_estado == 'cancelado'">
                 <field name="x_name" decoration-bf="1"/>
                 <field name="x_partner_id" optional="show"/>
                 <field name="x_order_id" optional="show"/>
@@ -139,7 +139,7 @@
         <field name="name">x_automa_obra.kanban</field>
         <field name="model">x_automa_obra</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="x_estado" quick_create="0" group_create="0" group_edit="0" group_delete="0">
+            <kanban default_group_by="x_estado" create="0" quick_create="0" group_create="0" group_edit="0" group_delete="0">
                 <templates>
                     <t t-name="card">
                         <field name="x_name" class="fw-bold fs-5"/>
@@ -159,7 +159,7 @@
         <field name="name">x_automa_obra.form</field>
         <field name="model">x_automa_obra</field>
         <field name="arch" type="xml">
-            <form>
+            <form create="0">
                 <header>
                     <field name="x_estado" widget="statusbar" options="{'clickable': '1'}"/>
                 </header>
