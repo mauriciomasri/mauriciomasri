@@ -2,22 +2,36 @@
 <odoo>
 <!-- noupdate: la dirección del webhook (UUID) no cambia al actualizar el módulo -->
 <data noupdate="1">
-    <!-- La app de técnicos manda aquí el recorrido (JSON con el PDF en base64).
-         Si llega otra vez el mismo recorrido (mismo uid), se actualiza en lugar de duplicarse. -->
+    <!-- La app de técnicos manda aquí el recorrido (JSON con el PDF en base64). -->
     <record id="automation_webhook_recorrido" model="base.automation">
         <field name="name">Recorridos: recibir desde la app de técnicos</field>
         <field name="model_id" ref="model_x_automa_recorrido"/>
         <field name="trigger">on_webhook</field>
         <field name="record_getter">model.search([('x_app_uid', '=', payload.get('uid') or 'sin-uid')], limit=1) or model.create({'x_name': 'Recorrido', 'x_app_uid': payload.get('uid') or False})</field>
     </record>
-    <record id="action_webhook_recorrido" model="ir.actions.server">
+</data>
+
+<data>
+    <!-- v1.0 tenía la acción en el bloque noupdate; se reemplaza por la de abajo (sí se actualiza). -->
+    <delete model="ir.actions.server" id="action_webhook_recorrido"/>
+
+    <record id="action_procesar_recorrido" model="ir.actions.server">
         <field name="name">Recorridos: guardar recorrido recibido</field>
         <field name="model_id" ref="model_x_automa_recorrido"/>
         <field name="base_automation_id" ref="automation_webhook_recorrido"/>
         <field name="usage">base_automation</field>
         <field name="state">code</field>
         <field name="code">p = payload or {}
-obra = (p.get('obra') or '').strip()
+obra_txt = (p.get('obra') or '').strip()
+uid = p.get('uid') or ''
+fecha = p.get('fecha') or False
+bot = env.ref('base.partner_root').id
+rec = record
+# El mismo recorrido mandado con OTRA fecha es un recorrido nuevo: no se sobrescribe el historial.
+if rec.x_envios and fecha and rec.x_fecha and str(rec.x_fecha) != fecha:
+    key = '%s-%s' % (uid, fecha)
+    rec = model.search([('x_app_uid', '=', key)], limit=1) or model.create({'x_name': 'Recorrido', 'x_app_uid': key})
+
 def num(k):
     try:
         return int(p.get(k) or 0)
@@ -25,43 +39,79 @@ def num(k):
         return 0
 rojo, amarillo, azul, verde = num('rojo'), num('amarillo'), num('azul'), num('verde')
 total = rojo + amarillo + azul + verde
-fecha = p.get('fecha') or False
+
+# Obra: se busca por nombre; si no existe se crea (En curso) y se intenta ligar a una cotización.
+Obra = env['x_automa_obra']
+obra = rec.x_obra_id
+if not obra and obra_txt:
+    obra = Obra.search([('x_name', '=ilike', obra_txt)], limit=1)
+    if not obra:
+        vo = {'x_name': obra_txt, 'x_estado': 'curso'}
+        SO = env['sale.order']
+        orders = SO.search([('name', '=ilike', obra_txt)], limit=2)
+        if not orders:
+            orders = SO.search(['|', '|', ('client_order_ref', 'ilike', obra_txt), ('partner_id.name', 'ilike', obra_txt), ('name', 'ilike', obra_txt)], order='date_order desc', limit=2)
+        if len(orders) == 1:
+            vo['x_order_id'] = orders.id
+            vo['x_partner_id'] = orders.partner_id.id
+        obra = Obra.create(vo)
+
 vals = {
-    'x_name': ('Recorrido %s %s' % (obra, fecha or '')).strip(),
-    'x_obra': obra,
+    'x_name': ('Recorrido %s %s' % (obra_txt, fecha or '')).strip(),
+    'x_obra': obra_txt,
     'x_fecha': fecha,
     'x_tecnico': (p.get('tecnico') or '').strip(),
     'x_rojo': rojo, 'x_amarillo': amarillo, 'x_azul': azul, 'x_verde': verde,
     'x_total': total,
     'x_pct_cableado': round(100.0 * (azul + verde) / total, 1) if total else 0.0,
     'x_pct_terminado': round(100.0 * verde / total, 1) if total else 0.0,
-    'x_envios': (record.x_envios or 0) + 1,
+    'x_envios': (rec.x_envios or 0) + 1,
 }
+if obra:
+    vals['x_obra_id'] = obra.id
+    if obra.x_order_id and not rec.x_order_id:
+        vals['x_order_id'] = obra.x_order_id.id
+        vals['x_partner_id'] = obra.x_partner_id.id
+adjuntos = []
 if p.get('pdf'):
+    if rec.x_pdf:
+        # Corrección del mismo día: el PDF anterior queda en el historial.
+        old = env['ir.attachment'].create({'name': 'Anterior - ' + (rec.x_pdf_name or 'recorrido.pdf'), 'datas': rec.x_pdf, 'res_model': 'x_automa_recorrido', 'res_id': rec.id, 'mimetype': 'application/pdf'})
+        adjuntos = [old.id]
     vals['x_pdf'] = p.get('pdf')
     vals['x_pdf_name'] = p.get('archivo') or 'Recorrido.pdf'
-# Ligar con la cotización: por número (S00123), referencia del cliente o nombre del cliente.
-if not record.x_order_id and obra:
-    SO = env['sale.order']
-    orders = SO.search([('name', '=ilike', obra)], limit=2)
-    if not orders:
-        orders = SO.search(['|', '|', ('client_order_ref', 'ilike', obra), ('partner_id.name', 'ilike', obra), ('name', 'ilike', obra)], order='date_order desc', limit=2)
-    if len(orders) == 1:
-        vals['x_order_id'] = orders.id
-        vals['x_partner_id'] = orders.partner_id.id
-nuevo = not record.x_envios
-record.write(vals)
+
+nuevo = not rec.x_envios
+rec.write(vals)
 resumen = 'Falta tubería %s · Detalle %s · Cableado OK %s · Terminado %s (%s salidas)' % (rojo, amarillo, azul, verde, total)
-bot = env.ref('base.partner_root').id
-record.message_post(body=('Recorrido recibido de la app' if nuevo else 'Recorrido corregido desde la app') + ': ' + resumen, author_id=bot)
-if record.x_order_id:
-    record.x_order_id.message_post(body='%s del %s (%s): %s' % ('Nuevo recorrido' if nuevo else 'Recorrido corregido', fecha or '', vals['x_tecnico'] or 'técnico', resumen), author_id=bot)
+rec.message_post(body=('Recorrido recibido de la app' if nuevo else 'Recorrido corregido desde la app (el PDF anterior queda adjunto)') + ': ' + resumen, author_id=bot, attachment_ids=adjuntos)
+quien = '%s del %s (%s): %s' % ('Nuevo recorrido' if nuevo else 'Recorrido corregido', fecha or '', vals['x_tecnico'] or 'técnico', resumen)
+if obra:
+    obra.message_post(body=quien, author_id=bot)
+if rec.x_order_id:
+    rec.x_order_id.message_post(body=quien, author_id=bot)
 </field>
     </record>
-</data>
 
-<!-- Botón de menú: abre la app de técnicos ya conectada a este Odoo -->
-<data>
+    <!-- Agrupa en obras los recorridos que llegaron antes de existir las obras -->
+    <record id="action_agrupar_obras" model="ir.actions.server">
+        <field name="name">Recorridos: agrupar en obras</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="state">code</field>
+        <field name="code">Obra = env['x_automa_obra']
+for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
+    nombre = (r.x_obra or '').strip() or 'Sin obra'
+    obra = Obra.search([('x_name', '=ilike', nombre)], limit=1)
+    if not obra:
+        obra = Obra.create({'x_name': nombre, 'x_estado': 'curso', 'x_order_id': r.x_order_id.id or False, 'x_partner_id': r.x_partner_id.id or False})
+    r.write({'x_obra_id': obra.id})
+</field>
+    </record>
+    <function model="ir.actions.server" name="run">
+        <value eval="[ref('action_agrupar_obras')]"/>
+    </function>
+
+    <!-- Botón de menú: abre la app de técnicos ya conectada a este Odoo -->
     <record id="action_conectar_app" model="ir.actions.server">
         <field name="name">Conectar app de técnicos</field>
         <field name="model_id" ref="model_x_automa_recorrido"/>

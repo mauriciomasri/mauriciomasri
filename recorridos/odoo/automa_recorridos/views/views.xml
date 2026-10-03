@@ -6,7 +6,8 @@
         <field name="arch" type="xml">
             <list create="0" default_order="x_fecha desc, id desc">
                 <field name="x_fecha"/>
-                <field name="x_obra" string="Obra" decoration-bf="1"/>
+                <field name="x_obra_id" string="Obra" decoration-bf="1"/>
+                <field name="x_obra" string="Obra (texto)" optional="hide"/>
                 <field name="x_order_id" optional="show"/>
                 <field name="x_partner_id" optional="hide"/>
                 <field name="x_tecnico" optional="show"/>
@@ -31,6 +32,7 @@
                     <div class="oe_title"><h1><field name="x_name"/></h1></div>
                     <group>
                         <group string="Obra">
+                            <field name="x_obra_id"/>
                             <field name="x_obra"/>
                             <field name="x_order_id" options="{'no_create': True}"/>
                             <field name="x_partner_id" options="{'no_create': True}"/>
@@ -84,15 +86,18 @@
         <field name="arch" type="xml">
             <search>
                 <field name="x_obra" string="Obra" filter_domain="['|', '|', ('x_obra', 'ilike', self), ('x_order_id.name', 'ilike', self), ('x_partner_id.name', 'ilike', self)]"/>
+                <field name="x_obra_id"/>
                 <field name="x_order_id"/>
                 <field name="x_partner_id"/>
                 <field name="x_tecnico"/>
+                <filter name="obras_en_curso" string="Obras en curso" domain="[('x_obra_id.x_estado', '=', 'curso')]"/>
+                <separator/>
                 <filter name="sin_cotizacion" string="Sin cotización ligada" domain="[('x_order_id', '=', False)]"/>
                 <filter name="con_pendientes" string="Con pendientes (rojo o amarillo)" domain="['|', ('x_rojo', '&gt;', 0), ('x_amarillo', '&gt;', 0)]"/>
                 <separator/>
                 <filter name="f_fecha" string="Fecha" date="x_fecha"/>
                 <group>
-                    <filter name="g_obra" string="Obra" context="{'group_by': 'x_obra'}"/>
+                    <filter name="g_obra" string="Obra" context="{'group_by': 'x_obra_id'}"/>
                     <filter name="g_order" string="Cotización" context="{'group_by': 'x_order_id'}"/>
                     <filter name="g_tecnico" string="Técnico" context="{'group_by': 'x_tecnico'}"/>
                     <filter name="g_mes" string="Mes" context="{'group_by': 'x_fecha:month'}"/>
@@ -104,10 +109,127 @@
         <field name="name">Recorridos</field>
         <field name="res_model">x_automa_recorrido</field>
         <field name="view_mode">list,form,graph</field>
+        <field name="context">{'search_default_obras_en_curso': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Aquí llegan los recorridos de obra</p>
             <p>Los técnicos marcan las salidas en el plano con la app y tocan <b>Enviar → Guardar en Odoo</b>.
                Para conectar la app usa el menú <b>Conectar app de técnicos</b>.</p>
+        </field>
+    </record>
+
+    <!-- Obras: agrupan los recorridos y llevan el status -->
+    <record id="view_obra_list" model="ir.ui.view">
+        <field name="name">x_automa_obra.list</field>
+        <field name="model">x_automa_obra</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="x_estado == 'cancelado'">
+                <field name="x_name" decoration-bf="1"/>
+                <field name="x_partner_id" optional="show"/>
+                <field name="x_order_id" optional="show"/>
+                <field name="x_ultima_fecha"/>
+                <field name="x_recorrido_count" string="Recorridos"/>
+                <field name="x_pendientes" decoration-danger="x_pendientes &gt; 0"/>
+                <field name="x_pct_cableado" widget="progressbar"/>
+                <field name="x_pct_terminado" widget="progressbar"/>
+                <field name="x_estado" widget="badge" decoration-info="x_estado == 'curso'" decoration-success="x_estado == 'completado'" decoration-danger="x_estado == 'cancelado'"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_obra_kanban" model="ir.ui.view">
+        <field name="name">x_automa_obra.kanban</field>
+        <field name="model">x_automa_obra</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="x_estado" quick_create="0" group_create="0" group_edit="0" group_delete="0">
+                <templates>
+                    <t t-name="card">
+                        <field name="x_name" class="fw-bold fs-5"/>
+                        <field name="x_partner_id" class="small text-muted"/>
+                        <div class="small">Terminado <field name="x_pct_terminado" widget="progressbar"/></div>
+                        <footer class="pt-1 small">
+                            <span><field name="x_recorrido_count"/> recorridos</span>
+                            <span class="ms-2 text-danger" invisible="not x_pendientes"><field name="x_pendientes"/> pendientes</span>
+                            <field name="x_ultima_fecha" class="ms-auto text-muted"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    <record id="view_obra_form" model="ir.ui.view">
+        <field name="name">x_automa_obra.form</field>
+        <field name="model">x_automa_obra</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="x_estado" widget="statusbar" options="{'clickable': '1'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="x_name" placeholder="Nombre de la obra"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="x_partner_id" options="{'no_create': True}"/>
+                            <field name="x_order_id" options="{'no_create': True}"/>
+                            <field name="x_ultima_fecha"/>
+                        </group>
+                        <group string="Último recorrido">
+                            <field name="x_pendientes"/>
+                            <field name="x_pct_cableado" widget="progressbar"/>
+                            <field name="x_pct_terminado" widget="progressbar"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Recorridos" name="recorridos">
+                            <field name="x_recorrido_ids" readonly="1">
+                                <list default_order="x_fecha desc, id desc">
+                                    <field name="x_fecha"/>
+                                    <field name="x_tecnico"/>
+                                    <field name="x_rojo" string="🔴"/>
+                                    <field name="x_amarillo" string="🟡"/>
+                                    <field name="x_azul" string="🔵"/>
+                                    <field name="x_verde" string="🟢"/>
+                                    <field name="x_pct_cableado" widget="progressbar"/>
+                                    <field name="x_pct_terminado" widget="progressbar"/>
+                                    <field name="x_pdf_name" column_invisible="1"/>
+                                    <field name="x_pdf" widget="binary" filename="x_pdf_name" string="PDF"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notas" name="notas">
+                            <field name="x_notas" nolabel="1" placeholder="Notas internas de la obra"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_obra_search" model="ir.ui.view">
+        <field name="name">x_automa_obra.search</field>
+        <field name="model">x_automa_obra</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="x_name" string="Obra" filter_domain="['|', '|', ('x_name', 'ilike', self), ('x_partner_id.name', 'ilike', self), ('x_order_id.name', 'ilike', self)]"/>
+                <field name="x_partner_id"/>
+                <filter name="en_curso" string="En curso" domain="[('x_estado', '=', 'curso')]"/>
+                <filter name="completadas" string="Completadas" domain="[('x_estado', '=', 'completado')]"/>
+                <filter name="canceladas" string="Canceladas" domain="[('x_estado', '=', 'cancelado')]"/>
+                <separator/>
+                <filter name="con_pendientes" string="Con pendientes" domain="[('x_pendientes', '&gt;', 0)]"/>
+                <group>
+                    <filter name="g_estado" string="Status" context="{'group_by': 'x_estado'}"/>
+                    <filter name="g_cliente" string="Cliente" context="{'group_by': 'x_partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_obras" model="ir.actions.act_window">
+        <field name="name">Obras</field>
+        <field name="res_model">x_automa_obra</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'search_default_en_curso': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aquí aparecen tus obras</p>
+            <p>Se crean solas cuando llega el primer recorrido de una obra. Cada obra junta todos sus recorridos y lleva su status: En curso, Completado o Cancelado.</p>
         </field>
     </record>
 
@@ -126,7 +248,8 @@
         </field>
     </record>
 
-    <menuitem id="menu_root" name="Recorridos" web_icon="automa_recorridos,static/description/icon.png" sequence="6"/>
-    <menuitem id="menu_recorridos" name="Recorridos" parent="menu_root" action="action_recorridos" sequence="1"/>
+    <menuitem id="menu_root" name="Recorridos" web_icon="automa_recorridos,static/description/icon.png" sequence="6" action="action_obras"/>
+    <menuitem id="menu_obras" name="Obras" parent="menu_root" action="action_obras" sequence="1"/>
+    <menuitem id="menu_recorridos" name="Recorridos" parent="menu_root" action="action_recorridos" sequence="2"/>
     <menuitem id="menu_conectar" name="Conectar app de técnicos" parent="menu_root" action="action_conectar_app" sequence="9" groups="base.group_system"/>
 </odoo>

@@ -6,6 +6,14 @@ Guarda en Odoo los recorridos que hacen los técnicos con la app
 
 ## Qué agrega
 
+- **Obras**: cada obra junta todos sus recorridos (día 2, día 4, día 8…) y
+  lleva su status **En curso / Completado / Cancelado**. Por defecto solo se
+  ven las obras en curso (quita el filtro para ver las demás). Se crean solas
+  con el primer recorrido de esa obra.
+- Historial completo: un recorrido corregido el mismo día guarda el PDF
+  anterior en su historial; si se manda en otra fecha, se crea un recorrido
+  nuevo.
+
 - App **Recorridos** con la lista de recorridos: fecha, obra, cotización,
   técnico, conteo 🔴 🟡 🔵 🟢, % cableado, % terminado y el PDF.
 - Ficha de cada recorrido con el **PDF visible dentro de Odoo** y chatter.

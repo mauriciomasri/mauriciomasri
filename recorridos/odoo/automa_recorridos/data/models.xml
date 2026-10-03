@@ -1,6 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 <data>
+    <!-- Obra: agrupa todos los recorridos de una obra y lleva su status -->
+    <record id="model_x_automa_obra" model="ir.model">
+        <field name="name">Obra (recorridos)</field>
+        <field name="model">x_automa_obra</field>
+        <field name="is_mail_thread" eval="True"/>
+        <field name="is_mail_activity" eval="True"/>
+    </record>
+    <record id="field_obra_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_name</field>
+        <field name="field_description">Obra</field>
+        <field name="ttype">char</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_obra_estado" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_estado</field>
+        <field name="field_description">Status</field>
+        <field name="ttype">selection</field>
+        <field name="selection">[('curso', 'En curso'), ('completado', 'Completado'), ('cancelado', 'Cancelado')]</field>
+        <field name="group_expand" eval="False"/>
+        <field name="tracking" eval="True"/>
+    </record>
+    <record id="default_obra_estado" model="ir.default">
+        <field name="field_id" ref="field_obra_estado"/>
+        <field name="json_value">"curso"</field>
+    </record>
+    <record id="field_obra_order" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_order_id</field>
+        <field name="field_description">Cotización</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">sale.order</field>
+        <field name="on_delete">set null</field>
+    </record>
+    <record id="field_obra_partner" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_partner_id</field>
+        <field name="field_description">Cliente</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">res.partner</field>
+        <field name="on_delete">set null</field>
+    </record>
+    <record id="field_obra_notas" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_notas</field>
+        <field name="field_description">Notas</field>
+        <field name="ttype">text</field>
+    </record>
+
     <!-- Recorrido de obra (lo crea la app de técnicos por webhook) -->
     <record id="model_x_automa_recorrido" model="ir.model">
         <field name="name">Recorrido de obra</field>
@@ -19,6 +69,15 @@
         <field name="name">x_obra</field>
         <field name="field_description">Obra (como la escribió el técnico)</field>
         <field name="ttype">char</field>
+    </record>
+    <record id="field_recorrido_obra_id" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_obra_id</field>
+        <field name="field_description">Obra</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">x_automa_obra</field>
+        <field name="on_delete">set null</field>
+        <field name="index">True</field>
     </record>
     <record id="field_recorrido_order" model="ir.model.fields">
         <field name="model_id" ref="model_x_automa_recorrido"/>
@@ -118,6 +177,78 @@
         <field name="ttype">integer</field>
     </record>
 
+    <!-- Obra: recorridos y datos del último recorrido -->
+    <record id="field_obra_recorrido_ids" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_recorrido_ids</field>
+        <field name="field_description">Recorridos</field>
+        <field name="ttype">one2many</field>
+        <field name="relation">x_automa_recorrido</field>
+        <field name="relation_field">x_obra_id</field>
+    </record>
+    <record id="field_obra_recorrido_count" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_recorrido_count</field>
+        <field name="field_description">Recorridos</field>
+        <field name="ttype">integer</field>
+        <field name="store" eval="True"/>
+        <field name="readonly" eval="True"/>
+        <field name="depends">x_recorrido_ids</field>
+        <field name="compute">for obra in self:
+    obra['x_recorrido_count'] = len(obra.x_recorrido_ids)</field>
+    </record>
+    <record id="field_obra_ultima_fecha" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_ultima_fecha</field>
+        <field name="field_description">Último recorrido</field>
+        <field name="ttype">date</field>
+        <field name="store" eval="True"/>
+        <field name="readonly" eval="True"/>
+        <field name="depends">x_recorrido_ids.x_fecha</field>
+        <field name="compute">for obra in self:
+    ult = obra.x_recorrido_ids.sorted('x_fecha')[-1:]
+    obra['x_ultima_fecha'] = ult.x_fecha or False</field>
+    </record>
+    <record id="field_obra_pendientes" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_pendientes</field>
+        <field name="field_description">Pendientes (rojo + amarillo)</field>
+        <field name="ttype">integer</field>
+        <field name="store" eval="True"/>
+        <field name="readonly" eval="True"/>
+        <field name="depends">x_recorrido_ids.x_fecha,x_recorrido_ids.x_rojo,x_recorrido_ids.x_amarillo</field>
+        <field name="compute">for obra in self:
+    ult = obra.x_recorrido_ids.sorted('x_fecha')[-1:]
+    obra['x_pendientes'] = (ult.x_rojo or 0) + (ult.x_amarillo or 0)</field>
+    </record>
+    <record id="field_obra_pct_cableado" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_pct_cableado</field>
+        <field name="field_description">% cableado</field>
+        <field name="ttype">float</field>
+        <field name="store" eval="True"/>
+        <field name="readonly" eval="True"/>
+        <field name="depends">x_recorrido_ids.x_fecha,x_recorrido_ids.x_pct_cableado</field>
+        <field name="compute">for obra in self:
+    ult = obra.x_recorrido_ids.sorted('x_fecha')[-1:]
+    obra['x_pct_cableado'] = ult.x_pct_cableado or 0.0</field>
+    </record>
+    <record id="field_obra_pct_terminado" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="name">x_pct_terminado</field>
+        <field name="field_description">% terminado</field>
+        <field name="ttype">float</field>
+        <field name="store" eval="True"/>
+        <field name="readonly" eval="True"/>
+        <field name="depends">x_recorrido_ids.x_fecha,x_recorrido_ids.x_pct_terminado</field>
+        <field name="compute">for obra in self:
+    ult = obra.x_recorrido_ids.sorted('x_fecha')[-1:]
+    obra['x_pct_terminado'] = ult.x_pct_terminado or 0.0</field>
+    </record>
+    <record id="model_x_automa_obra" model="ir.model">
+        <field name="order">x_ultima_fecha desc, id desc</field>
+    </record>
+
     <!-- Orden de la lista (después de crear el campo de fecha) -->
     <record id="model_x_automa_recorrido" model="ir.model">
         <field name="order">x_fecha desc, id desc</field>
@@ -144,6 +275,15 @@
     </record>
 
     <!-- Permisos: usuarios internos -->
+    <record id="access_x_automa_obra_user" model="ir.model.access">
+        <field name="name">x_automa_obra usuarios</field>
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
     <record id="access_x_automa_recorrido_user" model="ir.model.access">
         <field name="name">x_automa_recorrido usuarios</field>
         <field name="model_id" ref="model_x_automa_recorrido"/>
