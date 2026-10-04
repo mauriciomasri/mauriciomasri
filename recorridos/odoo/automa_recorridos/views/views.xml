@@ -239,6 +239,10 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="x_plano_name" invisible="1"/>
+                <field name="x_plano" filename="x_plano_name" string="Plano del proyecto"/>
+            </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="%(action_recorridos)d" type="action" class="oe_stat_button" icon="fa-map-marker"
                         context="{'search_default_x_order_id': id, 'default_x_order_id': id}" invisible="not x_recorrido_count">

@@ -9,6 +9,14 @@
         <field name="trigger">on_webhook</field>
         <field name="record_getter">model.search([('x_app_uid', '=', payload.get('uid') or 'sin-uid')], limit=1) or model.create({'x_name': 'Recorrido', 'x_app_uid': payload.get('uid') or False})</field>
     </record>
+    <!-- Catálogo de planos de obras vivas que lee la app de técnicos (archivo JS público con clave) -->
+    <record id="catalogo_planos" model="ir.attachment">
+        <field name="name">automa_catalogo_planos.js</field>
+        <field name="mimetype">text/javascript</field>
+        <field name="datas">d2luZG93Ll9fYXV0b21hUGxhbm9zKFtdKTs=</field>
+        <field name="res_model">x_automa_obra</field>
+        <field name="res_id">0</field>
+    </record>
 </data>
 
 <data>
@@ -43,6 +51,16 @@ total = rojo + amarillo + azul + verde
 # Obra: se busca por nombre; si no existe se crea (En curso) y se intenta ligar a una cotización.
 Obra = env['x_automa_obra']
 obra = rec.x_obra_id
+# Plano bajado de Odoo: la app manda la orden de venta, así se liga sin depender del nombre.
+orden = env['sale.order']
+try:
+    orden = env['sale.order'].browse(int(p.get('order_id') or 0)).exists()
+except Exception:
+    pass
+if not obra and orden:
+    obra = Obra.search([('x_order_id', '=', orden.id)], limit=1)
+    if not obra:
+        obra = Obra.create({'x_name': obra_txt or orden.client_order_ref or orden.partner_id.name or orden.name, 'x_estado': 'curso', 'x_order_id': orden.id, 'x_partner_id': orden.partner_id.id})
 if not obra and obra_txt:
     obra = Obra.search([('x_name', '=ilike', obra_txt)], limit=1)
     if not obra:
@@ -114,6 +132,84 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
         <value eval="[ref('action_agrupar_obras')]"/>
     </function>
 
+    <function model="ir.attachment" name="generate_access_token">
+        <value eval="[ref('catalogo_planos')]"/>
+    </function>
+
+    <!-- Rehace el catálogo de planos: órdenes con plano cuya obra no está Completada ni Cancelada.
+         Cada plano se publica como archivo JS con clave para que la app (en otro dominio) lo pueda leer. -->
+    <record id="action_reconstruir_planos" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos para la app</field>
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="state">code</field>
+        <field name="code">SO = env['sale.order'].sudo()
+Att = env['ir.attachment'].sudo()
+Obra = env['x_automa_obra'].sudo()
+items = []
+keep = []
+for so in SO.search([('x_plano', '!=', False)], order='date_order desc'):
+    obra = Obra.search([('x_order_id', '=', so.id)], limit=1)
+    if obra and obra.x_estado in ('completado', 'cancelado'):
+        continue
+    src = Att.search([('res_model', '=', 'sale.order'), ('res_id', '=', so.id), ('res_field', '=', 'x_plano')], limit=1)
+    version = src.checksum or str(so.write_date)
+    nombre = 'automa_plano_%s.js' % so.id
+    att = Att.search([('name', '=', nombre), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)], limit=1)
+    if not att or att.description != version:
+        js = 'window.__automaPlano(%d,"%s");' % (so.id, so.x_plano.decode())
+        vals = {'raw': js.encode(), 'mimetype': 'text/javascript', 'description': version}
+        if att:
+            att.write(vals)
+        else:
+            att = Att.create(dict(vals, name=nombre, res_model='x_automa_obra', res_id=0))
+    token = att.generate_access_token()[0]
+    keep.append(att.id)
+    items.append({
+        'order_id': so.id,
+        'orden': so.name,
+        'obra': obra.x_name if obra else (so.client_order_ref or so.partner_id.name or so.name),
+        'cliente': so.partner_id.name or '',
+        'archivo': so.x_plano_name or 'Plano.pdf',
+        'plano': '/web/content/%d?access_token=%s' % (att.id, token),
+        'v': version,
+    })
+Att.search([('name', '=like', 'automa_plano_%.js'), ('res_model', '=', 'x_automa_obra'), ('id', 'not in', keep)]).unlink()
+cat = env.ref('automa_recorridos.catalogo_planos').sudo()
+cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), 'mimetype': 'text/javascript'})
+</field>
+    </record>
+    <record id="automation_planos_orden" model="base.automation">
+        <field name="name">Recorridos: publicar plano al subirlo a la orden</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_order_plano')])]"/>
+    </record>
+    <record id="action_planos_orden" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos (orden)</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="base_automation_id" ref="automation_planos_orden"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().run()</field>
+    </record>
+    <record id="automation_planos_obra" model="base.automation">
+        <field name="name">Recorridos: quitar/poner plano al cambiar status de la obra</field>
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_obra_estado'), ref('field_obra_order')])]"/>
+    </record>
+    <record id="action_planos_obra" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos (obra)</field>
+        <field name="model_id" ref="model_x_automa_obra"/>
+        <field name="base_automation_id" ref="automation_planos_obra"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().run()</field>
+    </record>
+    <function model="ir.actions.server" name="run">
+        <value eval="[ref('action_reconstruir_planos')]"/>
+    </function>
+
     <!-- Obras vacías: si a una obra ya no le queda ningún recorrido (p. ej. se movió a la obra
          correcta), se borra sola. -->
     <record id="automation_borrar_obras_vacias" model="base.automation">
@@ -140,10 +236,11 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
         <field name="model_id" ref="model_x_automa_recorrido"/>
         <field name="state">code</field>
         <field name="code">rule = env.ref('automa_recorridos.automation_webhook_recorrido')
+cat = env.ref('automa_recorridos.catalogo_planos').sudo()
 action = {
     'type': 'ir.actions.act_url',
     'target': 'new',
-    'url': 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=' + (rule.url or ''),
+    'url': 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=' + (rule.url or '') + '&amp;planos=%s:%s' % (cat.id, cat.generate_access_token()[0]),
 }
 </field>
     </record>

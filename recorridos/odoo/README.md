@@ -32,6 +32,17 @@ Guarda en Odoo los recorridos que hacen los técnicos con la app
    Si ya tenía la app instalada: **toca el nombre de la obra → Conexión con
    Odoo → pega el enlace**.
 
+## Planos de obras (la app los baja de Odoo)
+
+- En la **orden de venta** hay un campo **Plano del proyecto**: sube ahí el PDF.
+- Una obra está **viva** si su orden tiene plano y la obra no está en
+  *Completado* ni *Cancelado*. Solo las vivas aparecen en la app.
+- En la app, **Planos de obras** lista las obras vivas; al abrir uno, el
+  recorrido queda ligado a esa orden. Los planos bajados se guardan en el iPad
+  para usarlos sin señal.
+- Tras actualizar el módulo, vuelve a mandar el enlace de **Conectar app de
+  técnicos** (ahora trae también el acceso a los planos).
+
 ## Corregir nombres de obra
 
 - **Renombrar**: abre la obra y cambia el nombre.

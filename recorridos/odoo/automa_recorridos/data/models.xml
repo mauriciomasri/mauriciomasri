@@ -274,6 +274,20 @@
     rec['x_recorrido_count'] = len(rec.x_recorrido_ids)</field>
     </record>
 
+    <!-- Plano del proyecto en la orden de venta (lo descargan los técnicos desde la app) -->
+    <record id="field_order_plano" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_plano</field>
+        <field name="field_description">Plano del proyecto</field>
+        <field name="ttype">binary</field>
+    </record>
+    <record id="field_order_plano_name" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_plano_name</field>
+        <field name="field_description">Nombre del plano</field>
+        <field name="ttype">char</field>
+    </record>
+
     <!-- Permisos: usuarios internos -->
     <record id="access_x_automa_obra_user" model="ir.model.access">
         <field name="name">x_automa_obra usuarios</field>
