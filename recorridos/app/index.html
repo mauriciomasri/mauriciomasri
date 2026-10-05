@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 28;
+  const APP_VERSION = 29;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1165,6 +1165,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     });
   }
   function b64ToBytes(b) { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+  const sinAcentos = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   async function openPlanos() {
     const base = planosBase(); if (!base) return;
     let lista = null, offline = false;
@@ -1184,10 +1185,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const it of lista) { let n = 0; for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); if (c && c.v === pl.v) n++; } guardados[it.order_id] = n; }
     sheet(`<h2>Planos de obras</h2>
       <p class="note">${offline ? "Sin señal: se muestra la última lista. Solo abren los planos marcados como guardados." : "Obras vivas en Odoo. El plano se guarda en este iPad para usarlo sin señal."}</p>
-      <div class="hlist">${lista.map(it => `<div class="hrow">
+      ${lista.length > 3 ? `<div class="field"><input id="plBuscar" type="search" placeholder="Buscar obra, cliente o cotización" autocomplete="off"></div>` : ""}
+      <div class="hlist">${lista.map(it => `<div class="hrow" data-q="${esc(sinAcentos([it.obra, it.orden, it.cliente].join(" ")))}">
           <div class="hinfo"><b>${esc(it.obra)}</b><span>${esc(it.orden)} · ${esc(it.cliente)} · ${it.planos.length} plano${it.planos.length > 1 ? "s" : ""}</span>${guardados[it.order_id] ? `<span class="c-verde">✓ ${guardados[it.order_id]} guardado${guardados[it.order_id] > 1 ? "s" : ""} en este iPad</span>` : ""}</div>
           <button type="button" class="btn primary" data-plano="${it.order_id}">Abrir</button></div>`).join("") || '<p class="note">No hay obras vivas con plano. En Odoo sube el plano en la orden de venta.</p>'}</div>`, () => {
       $("sheetHost").querySelectorAll("[data-plano]").forEach(b => b.onclick = () => elegirPlano(lista.find(x => String(x.order_id) === b.dataset.plano), base));
+      const bus = $("plBuscar");
+      if (bus) bus.oninput = () => {
+        const t = sinAcentos(bus.value).trim().split(/\s+/).filter(Boolean);
+        $("sheetHost").querySelectorAll(".hrow[data-q]").forEach(r => { r.hidden = !t.every(w => r.dataset.q.includes(w)); });
+      };
     });
   }
   async function elegirPlano(it, base) {
