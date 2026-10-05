@@ -478,6 +478,16 @@ cat = self.env.ref('automa_recorridos.catalogo_planos').sudo()
 for rec in self:
     rec['x_enlace'] = 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=%s&amp;planos=%s:%s' % (rule.url or '', cat.id, cat.access_token or '')</field>
     </record>
+    <record id="field_conexion_avisar" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_conexion"/>
+        <field name="name">x_avisar_ids</field>
+        <field name="field_description">Avisar por correo a</field>
+        <field name="ttype">many2many</field>
+        <field name="relation">res.users</field>
+        <field name="relation_table">x_recorrido_conexion_res_users_rel</field>
+        <field name="column1">x_recorrido_conexion_id</field>
+        <field name="column2">res_users_id</field>
+    </record>
     <record id="access_x_recorrido_conexion_admin" model="ir.model.access">
         <field name="name">x_recorrido_conexion admin</field>
         <field name="model_id" ref="model_x_recorrido_conexion"/>

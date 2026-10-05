@@ -353,6 +353,10 @@
                     <div class="oe_title"><h1>Conectar app de técnicos</h1></div>
                     <p>Copia este enlace y mándalo a tus técnicos. Lo abren en su iPad (o lo pegan en <b>Conectar con Odoo</b> dentro de la app) y quedan conectados: ven los planos de obras vivas y sus recorridos se guardan aquí.</p>
                     <field name="x_enlace" widget="CopyClipboardChar" nolabel="1" readonly="1"/>
+                    <group class="mt-4">
+                        <field name="x_avisar_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="Vacío = al administrador"/>
+                    </group>
+                    <div class="text-muted small">Les llega un correo cada vez que un técnico sube o corrige un recorrido.</div>
                     <div class="alert alert-warning mt-4" role="alert">
                         <b>¿Alguien dejó de trabajar contigo?</b> Genera un enlace nuevo: el anterior deja de funcionar en todos los equipos. Después manda el nuevo solo a los técnicos que siguen.
                     </div>

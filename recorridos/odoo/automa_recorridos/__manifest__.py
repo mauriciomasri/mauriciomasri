@@ -1,6 +1,6 @@
 {
     'name': 'Recorridos',
-    'version': '19.0.1.9.1',
+    'version': '19.0.1.9.2',
     'category': 'Services',
     'summary': 'Recorridos de obra: el técnico marca las salidas en el plano y el PDF se guarda en Odoo',
     'author': 'Automa',

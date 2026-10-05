@@ -117,7 +117,15 @@ if p.get('pdf'):
 nuevo = not rec.x_envios
 rec.write(vals)
 resumen = 'Falta tubería %s · Detalle %s · Cableado OK %s · Terminado %s (%s salidas)' % (rojo, amarillo, azul, verde, total)
-rec.message_post(body=('Recorrido recibido de la app' if nuevo else 'Recorrido corregido desde la app (el PDF anterior queda adjunto)') + ': ' + resumen, author_id=bot, attachment_ids=adjuntos)
+# Aviso por correo a quien esté en "Avisar por correo a" (Conectar app de técnicos); si no hay nadie, al administrador.
+conexion = env.ref('automa_recorridos.conexion_app', raise_if_not_found=False)
+avisar = (conexion and conexion.x_avisar_ids or env.ref('base.user_admin')).mapped('partner_id')
+titulo = '%s: %s' % ('Nuevo recorrido' if nuevo else 'Recorrido corregido', (obra.x_name if obra else obra_txt) or 'Obra')
+rec.message_post(
+    subject=titulo,
+    body=('Recorrido recibido de la app' if nuevo else 'Recorrido corregido desde la app (el PDF anterior queda adjunto)') + ' · %s · %s: %s' % (vals['x_tecnico'] or 'técnico', fecha or '', resumen),
+    author_id=bot, attachment_ids=adjuntos,
+    message_type='comment', subtype_xmlid='mail.mt_note', partner_ids=avisar.ids)
 quien = '%s del %s (%s): %s' % ('Nuevo recorrido' if nuevo else 'Recorrido corregido', fecha or '', vals['x_tecnico'] or 'técnico', resumen)
 if obra:
     obra.message_post(body=quien, author_id=bot)
