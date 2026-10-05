@@ -146,7 +146,7 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
         <field name="code">SO = env['sale.order'].sudo()
 Att = env['ir.attachment'].sudo()
 Obra = env['x_automa_obra'].sudo()
-Plano = env['x_automa_plano'].sudo()
+Plano = env['x_recorrido_plano'].sudo()
 excluir = env.context.get('excluir_planos') or []
 # El plano único de la v1.7 pasa a la lista de planos de la orden.
 for so in SO.search([('x_plano', '!=', False)]):
@@ -164,7 +164,7 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
     for pl in so.x_plano_ids:
         if pl.id in excluir or not pl.x_archivo:
             continue
-        src = Att.search([('res_model', '=', 'x_automa_plano'), ('res_id', '=', pl.id), ('res_field', '=', 'x_archivo')], limit=1)
+        src = Att.search([('res_model', '=', 'x_recorrido_plano'), ('res_id', '=', pl.id), ('res_field', '=', 'x_archivo')], limit=1)
         version = src.checksum or str(pl.write_date)
         nombre = 'automa_plano_%s.js' % pl.id
         att = Att.search([('name', '=', nombre), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)], limit=1)
@@ -199,18 +199,18 @@ cat = env.ref('automa_recorridos.catalogo_planos').sudo()
 cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), 'mimetype': 'text/javascript'})
 </field>
     </record>
-    <!-- v1.7: un solo plano en la orden; ahora son varios (x_automa_plano) -->
+    <!-- v1.7: un solo plano en la orden; ahora son varios (x_recorrido_plano) -->
     <delete model="ir.actions.server" id="action_planos_orden"/>
     <delete model="base.automation" id="automation_planos_orden"/>
     <record id="automation_planos_plano" model="base.automation">
         <field name="name">Recorridos: publicar planos al subirlos o cambiarlos</field>
-        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="trigger">on_create_or_write</field>
         <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_order')])]"/>
     </record>
     <record id="action_planos_plano" model="ir.actions.server">
         <field name="name">Recorridos: publicar planos (plano)</field>
-        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="base_automation_id" ref="automation_planos_plano"/>
         <field name="usage">base_automation</field>
         <field name="state">code</field>
@@ -218,12 +218,12 @@ cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), '
     </record>
     <record id="automation_planos_borrar" model="base.automation">
         <field name="name">Recorridos: quitar plano borrado de la app</field>
-        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="trigger">on_unlink</field>
     </record>
     <record id="action_planos_borrar" model="ir.actions.server">
         <field name="name">Recorridos: publicar planos (borrado)</field>
-        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="base_automation_id" ref="automation_planos_borrar"/>
         <field name="usage">base_automation</field>
         <field name="state">code</field>
