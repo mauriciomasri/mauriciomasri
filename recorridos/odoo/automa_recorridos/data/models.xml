@@ -302,13 +302,9 @@
     <record id="field_plano_tipo" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="name">x_tipo</field>
-        <field name="field_description">Tipo</field>
+        <field name="field_description">Tipo (antiguo)</field>
         <field name="ttype">selection</field>
         <field name="selection">[('canalizaciones', 'Canalizaciones'), ('iluminacion', 'Iluminación'), ('especiales', 'Especiales'), ('trayectorias', 'Trayectorias'), ('otro', 'Personalizado')]</field>
-    </record>
-    <record id="default_plano_tipo" model="ir.default">
-        <field name="field_id" ref="field_plano_tipo"/>
-        <field name="json_value">"canalizaciones"</field>
     </record>
     <record id="field_plano_tipo_texto" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
@@ -369,6 +365,18 @@
         <field name="depends">x_archivo_name</field>
         <field name="compute">for rec in self:
     rec['x_es_pdf'] = (rec.x_archivo_name or '').lower().endswith('.pdf')</field>
+    </record>
+    <!-- Tipo = formato del archivo (PDF, DWG…), lo pone Odoo solo -->
+    <record id="field_plano_formato" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_formato</field>
+        <field name="field_description">Tipo</field>
+        <field name="ttype">char</field>
+        <field name="store" eval="True"/>
+        <field name="depends">x_archivo_name</field>
+        <field name="compute">for rec in self:
+    nombre = rec.x_archivo_name or ''
+    rec['x_formato'] = nombre.rsplit('.', 1)[1].upper() if '.' in nombre else ''</field>
     </record>
     <record id="field_plano_archivo_name" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>

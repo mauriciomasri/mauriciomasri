@@ -245,22 +245,22 @@
                 <page string="Planos" name="automa_planos">
                     <field name="x_plano_ids" context="{'default_x_order_id': id}">
                         <list>
-                            <field name="x_tipo_id"/>
                             <field name="x_name"/>
+                            <field name="x_formato"/>
                             <field name="x_archivo_name" column_invisible="1"/>
-                            <field name="x_archivo" widget="binary" filename="x_archivo_name" string="PDF"/>
+                            <field name="x_archivo" widget="binary" filename="x_archivo_name" string="Archivo"/>
                             <field name="create_date" string="Subido" widget="date"/>
                             <field name="write_date" string="Actualizado" widget="date" optional="hide"/>
                         </list>
                         <form>
                             <group>
                                 <group>
-                                    <field name="x_tipo_id" required="1" placeholder="Escribe o elige: Canalizaciones, Iluminación…" options="{'no_open': True}"/>
-                                    <field name="x_name" placeholder="Ej. Planta baja, Azotea…"/>
+                                    <field name="x_name" required="1" placeholder="Ej. Especiales, Canalizaciones PB…"/>
+                                    <field name="x_formato" invisible="not x_formato"/>
                                 </group>
                                 <group>
                                     <field name="x_archivo_name" invisible="1"/>
-                                    <field name="x_archivo" filename="x_archivo_name" required="1"/>
+                                    <field name="x_archivo" filename="x_archivo_name" required="1" string="Archivo"/>
                                     <field name="create_date" string="Subido" invisible="not id" readonly="1"/>
                                 </group>
                             </group>
