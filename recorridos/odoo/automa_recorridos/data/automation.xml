@@ -162,7 +162,8 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
         continue
     planos = []
     for pl in so.x_plano_ids:
-        if pl.id in excluir or not pl.x_archivo:
+        # Solo los PDF van a la app (aquí también se pueden guardar DWG u otros archivos).
+        if pl.id in excluir or not pl.x_archivo or not (pl.x_archivo_name or '').lower().endswith('.pdf'):
             continue
         src = Att.search([('res_model', '=', 'x_recorrido_plano'), ('res_id', '=', pl.id), ('res_field', '=', 'x_archivo')], limit=1)
         version = src.checksum or str(pl.write_date)

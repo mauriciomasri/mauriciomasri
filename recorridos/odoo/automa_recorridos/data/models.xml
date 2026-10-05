@@ -322,6 +322,15 @@
         <field name="field_description">PDF</field>
         <field name="ttype">binary</field>
     </record>
+    <record id="field_plano_vista" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_vista</field>
+        <field name="field_description">Vista previa</field>
+        <field name="ttype">binary</field>
+        <field name="related">x_archivo</field>
+        <field name="readonly" eval="True"/>
+        <field name="store" eval="False"/>
+    </record>
     <record id="field_plano_archivo_name" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="name">x_archivo_name</field>
