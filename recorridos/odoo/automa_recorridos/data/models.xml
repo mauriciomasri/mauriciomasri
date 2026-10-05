@@ -360,6 +360,16 @@
         <field name="readonly" eval="True"/>
         <field name="store" eval="False"/>
     </record>
+    <record id="field_plano_es_pdf" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_es_pdf</field>
+        <field name="field_description">Es PDF</field>
+        <field name="ttype">boolean</field>
+        <field name="store" eval="False"/>
+        <field name="depends">x_archivo_name</field>
+        <field name="compute">for rec in self:
+    rec['x_es_pdf'] = (rec.x_archivo_name or '').lower().endswith('.pdf')</field>
+    </record>
     <record id="field_plano_archivo_name" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="name">x_archivo_name</field>

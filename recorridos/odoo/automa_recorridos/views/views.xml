@@ -264,7 +264,9 @@
                                     <field name="create_date" string="Subido" invisible="not id" readonly="1"/>
                                 </group>
                             </group>
-                            <field name="x_vista" widget="pdf_viewer" nolabel="1" invisible="not id"/>
+                            <field name="x_es_pdf" invisible="1"/>
+                            <field name="x_vista" widget="pdf_viewer" nolabel="1" invisible="not id or not x_es_pdf"/>
+                            <div class="text-muted small" invisible="not id or x_es_pdf">Este archivo no es PDF: se guarda aquí como respaldo y se descarga con la flecha ⬇. No aparece en la app de técnicos.</div>
                             <div class="text-muted small" invisible="id">La vista previa aparece después de guardar.</div>
                         </form>
                     </field>
