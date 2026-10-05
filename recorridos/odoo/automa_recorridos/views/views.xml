@@ -241,6 +241,9 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//button[@id='quotation_send']" position="after">
+                <button string="Enviar con planos" name="%(automa_recorridos.action_enviar_con_planos)d" type="action" invisible="state == 'cancel' or not x_plano_ids"/>
+            </xpath>
             <xpath expr="//page[@name='order_lines']" position="after">
                 <page string="Planos" name="automa_planos">
                     <field name="x_plano_ids" context="{'default_x_order_id': id}">
