@@ -246,6 +246,7 @@
                     <field name="x_plano_ids" context="{'default_x_order_id': id}">
                         <list>
                             <field name="x_tipo"/>
+                            <field name="x_tipo_texto" string="Personalizado" optional="show"/>
                             <field name="x_name"/>
                             <field name="x_archivo_name" column_invisible="1"/>
                             <field name="x_archivo" widget="binary" filename="x_archivo_name" string="PDF"/>
@@ -254,6 +255,7 @@
                             <group>
                                 <group>
                                     <field name="x_tipo" required="1"/>
+                                    <field name="x_tipo_texto" string="Escribe el tipo" invisible="x_tipo != 'otro'" required="x_tipo == 'otro'" placeholder="Ej. Voz y datos, CCTV…"/>
                                     <field name="x_name" placeholder="Ej. Planta baja, Azotea…"/>
                                 </group>
                                 <group>

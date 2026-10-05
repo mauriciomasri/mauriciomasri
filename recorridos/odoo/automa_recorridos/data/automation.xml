@@ -153,7 +153,7 @@ for so in SO.search([('x_plano', '!=', False)]):
     datos, nom = so.x_plano, so.x_plano_name
     so.write({'x_plano': False, 'x_plano_name': False})
     Plano.create({'x_order_id': so.id, 'x_tipo': 'canalizaciones', 'x_name': nom or 'Plano', 'x_archivo': datos, 'x_archivo_name': nom or 'Plano.pdf'})
-tipos = {'canalizaciones': 'Canalizaciones', 'especiales': 'Especiales', 'trayectorias': 'Trayectorias', 'otro': 'Otro'}
+tipos = {'canalizaciones': 'Canalizaciones', 'iluminacion': 'Iluminación', 'especiales': 'Especiales', 'trayectorias': 'Trayectorias'}
 items = []
 keep = []
 for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
@@ -179,7 +179,7 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
         keep.append(att.id)
         planos.append({
             'id': pl.id,
-            'tipo': tipos.get(pl.x_tipo, 'Plano'),
+            'tipo': (pl.x_tipo_texto or 'Personalizado') if pl.x_tipo == 'otro' else tipos.get(pl.x_tipo, 'Plano'),
             'nombre': pl.x_name or pl.x_archivo_name or 'Plano',
             'archivo': pl.x_archivo_name or 'Plano.pdf',
             'plano': '/web/content/%d?access_token=%s' % (att.id, token),
@@ -206,7 +206,7 @@ cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), '
         <field name="name">Recorridos: publicar planos al subirlos o cambiarlos</field>
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="trigger">on_create_or_write</field>
-        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_order')])]"/>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_tipo_texto'), ref('field_plano_order')])]"/>
     </record>
     <record id="action_planos_plano" model="ir.actions.server">
         <field name="name">Recorridos: publicar planos (plano)</field>

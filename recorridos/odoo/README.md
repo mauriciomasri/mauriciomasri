@@ -25,7 +25,7 @@ Guarda en Odoo los recorridos que hacen los técnicos con la app
 
 ## Instalar
 
-1. Odoo → **Aplicaciones → Importar módulo** → sube `automa_recorridos.zip`.
+1. Odoo → **Aplicaciones → Importar módulo** → sube `recorridos_vX_Y_Z.zip` (el más reciente).
 2. Abre la app **Recorridos → Conectar app de técnicos**. Se abre la app ya
    conectada a tu Odoo; copia ese enlace y mándalo a tus técnicos.
 3. Cada técnico abre el enlace (con internet) y lo instala como siempre.

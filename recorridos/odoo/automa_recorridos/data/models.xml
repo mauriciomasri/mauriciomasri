@@ -304,11 +304,17 @@
         <field name="name">x_tipo</field>
         <field name="field_description">Tipo</field>
         <field name="ttype">selection</field>
-        <field name="selection">[('canalizaciones', 'Canalizaciones'), ('especiales', 'Especiales'), ('trayectorias', 'Trayectorias'), ('otro', 'Otro')]</field>
+        <field name="selection">[('canalizaciones', 'Canalizaciones'), ('iluminacion', 'Iluminación'), ('especiales', 'Especiales'), ('trayectorias', 'Trayectorias'), ('otro', 'Personalizado')]</field>
     </record>
     <record id="default_plano_tipo" model="ir.default">
         <field name="field_id" ref="field_plano_tipo"/>
         <field name="json_value">"canalizaciones"</field>
+    </record>
+    <record id="field_plano_tipo_texto" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_tipo_texto</field>
+        <field name="field_description">Tipo personalizado</field>
+        <field name="ttype">char</field>
     </record>
     <record id="field_plano_archivo" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
