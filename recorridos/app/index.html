@@ -173,6 +173,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>. Si te mandaron el PDF de un recorrido, usa <b>Cargar recorrido anterior</b>.</p>
         <div class="actions">
           <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
+          <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
           <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
           <button class="btn" id="prevBtn" type="button">Cargar recorrido anterior</button>
           <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
@@ -233,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 26;
+  const APP_VERSION = 27;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1134,7 +1135,22 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function planosBase() {
     try { const v = localStorage.getItem(PLANOS_KEY), o = getOdoo(); if (!v || !o) return null; return { origin: new URL(o).origin, id: v.split(":")[0], token: v.split(":")[1] }; } catch (e) { return null; }
   }
-  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = !on; $("openBtn").classList.toggle("primary", !on); }
+  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = !on; $("conectarBtn").hidden = on; $("openBtn").classList.toggle("primary", !on); }
+  // Cada navegador (Safari, Chrome, la app en inicio) guarda su propia conexión: se conecta una vez con el enlace de Odoo.
+  $("conectarBtn").onclick = () => sheet(`
+      <h2>Conectar con Odoo</h2>
+      <p class="note">Pega el enlace que se genera en Odoo con <b>Recorridos → Conectar app de técnicos</b> (o abre ese enlace o su QR en este equipo). Se hace una sola vez en cada iPad o navegador.</p>
+      <div class="field"><input id="cxLink" placeholder="https://mauriciomasri.github.io/…?odoo=…&planos=…" autocomplete="off"></div>
+      <div class="row"><button type="button" class="btn" id="cxNo">Cancelar</button><button type="button" class="btn primary" id="cxOk">Conectar</button></div>`, () => {
+    $("cxNo").onclick = closeSheet;
+    $("cxOk").onclick = () => {
+      let q = null;
+      try { q = new URL($("cxLink").value.trim()).searchParams; } catch (e) {}
+      const o = q && q.get("odoo"), pl = q && q.get("planos");
+      if (!o || !validOdoo(o) || !pl || !/^\d+:[\w-]+$/.test(pl)) { toast("Ese no es el enlace de Odoo. Cópialo completo de Conectar app de técnicos."); return; }
+      setOdoo(o); setPlanos(pl); closeSheet(); toast("App conectada a Odoo"); flushOdoo(false);
+    };
+  });
   // Odoo no deja leer archivos desde otra dirección, pero sí cargarlos como <script>:
   // el catálogo y cada plano vienen como JS que llama a una función de la app.
   function loadJs(url, fnName, ms) {
