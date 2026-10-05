@@ -407,6 +407,16 @@
         <field name="field_description">Plano</field>
         <field name="ttype">char</field>
     </record>
+    <!-- Plano de la orden de venta sobre el que se hizo el recorrido (para que cualquier iPad parta del último) -->
+    <record id="field_recorrido_plano_id" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_plano_id</field>
+        <field name="field_description">Plano de la orden</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">x_recorrido_plano</field>
+        <field name="on_delete">set null</field>
+        <field name="index">True</field>
+    </record>
     <record id="access_x_recorrido_plano_user" model="ir.model.access">
         <field name="name">x_recorrido_plano usuarios</field>
         <field name="model_id" ref="model_x_recorrido_plano"/>

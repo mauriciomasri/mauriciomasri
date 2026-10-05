@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 24;
+  const APP_VERSION = 25;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1199,21 +1199,50 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       $("busy").textContent = "Cargando plano…";
     }
-    // ¿Ya hay un recorrido de esta obra en este iPad? Ofrecer partir de él.
+    // ¿Hay un recorrido anterior de este plano? Se ofrece el más reciente: el de este iPad o el último guardado en Odoo (de cualquier técnico).
     const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
-    const prev = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id)
-      .sort((a, b) => b.savedAt - a.savedAt)[0];
     const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
+    let prev = null;
+    const local = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt)[0];
+    if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este iPad" };
+    const u = pl.ultimo;
+    if (u && u.url && (!prev || (u.fecha || "") > (prev.fecha || ""))) {
+      const r = await ultimoDeOdoo(pl, u, base);
+      if (r) prev = { ...r, fecha: u.fecha || r.fecha, tecnico: u.tecnico || r.tecnico, donde: "en Odoo" };
+    }
     const limpio = () => { closeSheet(); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
-    if (!prev) return limpio();
     $("busy").hidden = true;
+    if (!prev) return limpio();
     sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2>
-      <p class="note">Ya tienes un recorrido de este plano del ${fmtFecha(prev.meta.fecha)} en este iPad.</p>
-      <div class="stack"><button type="button" class="btn primary" id="plPrev">Partir de ese recorrido</button><button type="button" class="btn" id="plClean">Plano limpio</button></div>`, () => {
+      <p class="note">Último recorrido de este plano: <b>${prev.fecha ? fmtFecha(prev.fecha) : "sin fecha"}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}</b> (${prev.donde}).</p>
+      <div class="stack"><button type="button" class="btn primary" id="plPrev">Partir del último recorrido</button><button type="button" class="btn" id="plClean">Plano limpio</button></div>`, () => {
       $("plClean").onclick = limpio;
       $("plPrev").onclick = () => { closeSheet(); $("busy").hidden = false;
-        startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { ...meta, obra: prev.meta.obra || it.obra, tecnico: prev.meta.tecnico || S.meta.tecnico, rid: newId() }, 1, true); };
+        startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: newId() }, 1, true); };
     });
+  }
+  // Baja (o toma del iPad si no hay señal) el último recorrido de un plano guardado en Odoo y saca el plano con sus marcas.
+  async function ultimoDeOdoo(pl, u, base) {
+    let c = await DB.planGet("r" + pl.id), pdf = c && c.v === u.v ? c.bytes : null;
+    if (!pdf) {
+      $("busy").hidden = false; $("busy").textContent = "Buscando último recorrido…";
+      try {
+        pdf = b64ToBytes((await loadJs(base.origin + u.url, "__automaRecorrido"))[1]);
+        await DB.planPut("r" + pl.id, { v: u.v, bytes: pdf });
+      } catch (e) {
+        pdf = c ? c.bytes : null;
+      }
+      $("busy").textContent = "Cargando plano…";
+    }
+    if (!pdf) return null;
+    try {
+      const doc = await pdfjsLib.getDocument({ data: pdf.slice(0) }).promise;
+      const att = await doc.getAttachments().catch(() => null);
+      doc.destroy();
+      if (!att || !att["recorrido.json"] || !att["original.pdf"]) return null;
+      const j = JSON.parse(new TextDecoder().decode(att["recorrido.json"].content));
+      return { bytes: att["original.pdf"].content, marks: migrate(j.marks || [], j.v), fecha: j.meta?.fecha, tecnico: j.meta?.tecnico, obra: j.meta?.obra };
+    } catch (e) { return null; }
   }
   $("planosBtn").onclick = openPlanos;
   paintPlanosBtn();
@@ -1254,7 +1283,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   async function queueOdoo(file) {
     const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
-    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano: S.meta.plano || "", ...c, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
+    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
     await DB.outPut(S.meta.rid, { body, obra: S.meta.obra, fecha: S.meta.fecha, at: Date.now() });
     await paintPending();
     return flushOdoo(true);

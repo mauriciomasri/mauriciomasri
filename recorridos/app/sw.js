@@ -1,7 +1,7 @@
 // Guarda la app en el celular para que funcione sin internet.
 // La página se busca primero en internet (para recibir actualizaciones) y, si no hay señal,
 // se usa la copia guardada. Al cambiar cualquier archivo de la app, sube VERSION.
-const VERSION = "recorridos-v24";
+const VERSION = "recorridos-v25";
 const FILES = [
   "./",
   "index.html",

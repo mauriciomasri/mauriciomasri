@@ -94,6 +94,12 @@ vals = {
     'x_pct_terminado': round(100.0 * verde / total, 1) if total else 0.0,
     'x_envios': (rec.x_envios or 0) + 1,
 }
+try:
+    plano = env['x_recorrido_plano'].browse(int(p.get('plano_id') or 0)).exists()
+except Exception:
+    plano = False
+if plano:
+    vals['x_plano_id'] = plano.id
 if obra:
     vals['x_obra_id'] = obra.id
     if obra.x_order_id and not rec.x_order_id:
@@ -152,6 +158,7 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
 Att = env['ir.attachment'].sudo()
 Obra = env['x_automa_obra'].sudo()
 Plano = env['x_recorrido_plano'].sudo()
+Rec = env['x_automa_recorrido'].sudo()
 excluir = env.context.get('excluir_planos') or []
 # El plano único de la v1.7 pasa a la lista de planos de la orden.
 for so in SO.search([('x_plano', '!=', False)]):
@@ -171,6 +178,11 @@ for pl in Plano.search(['|', ('x_tipo_id', '!=', False), ('x_tipo', '!=', False)
     if nombre_tipo and desc.lower() != nombre_tipo.lower():
         desc = '%s - %s' % (nombre_tipo, desc) if desc else nombre_tipo
     pl.write({'x_name': desc or pl.x_archivo_name or 'Plano', 'x_tipo_id': False, 'x_tipo': False, 'x_tipo_texto': False})
+# Recorridos de antes de la v1.8.8 (sin plano ligado): si su orden tiene un solo plano PDF, es ese.
+for so in Rec.search([('x_plano_id', '=', False), ('x_order_id', '!=', False)]).mapped('x_order_id'):
+    pdfs = so.x_plano_ids.filtered(lambda x: (x.x_archivo_name or '').lower().endswith('.pdf'))
+    if len(pdfs) == 1:
+        Rec.search([('x_plano_id', '=', False), ('x_order_id', '=', so.id)]).write({'x_plano_id': pdfs.id})
 items = []
 keep = []
 for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
@@ -195,6 +207,23 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
                 att = Att.create(dict(vals, name=nombre, res_model='x_automa_obra', res_id=0))
         token = att.generate_access_token()[0]
         keep.append(att.id)
+        # Último recorrido de este plano (de cualquier técnico): la app lo ofrece para seguir desde ahí.
+        ultimo = False
+        for r in Rec.search([('x_plano_id', '=', pl.id)], order='x_fecha desc, id desc', limit=10):
+            if r.x_pdf:
+                src_r = Att.search([('res_model', '=', 'x_automa_recorrido'), ('res_id', '=', r.id), ('res_field', '=', 'x_pdf')], limit=1)
+                v_r = src_r.checksum or str(r.write_date)
+                nom_r = 'automa_rec_%s.js' % pl.id
+                att_r = Att.search([('name', '=', nom_r), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)], limit=1)
+                if not att_r or att_r.description != v_r:
+                    vals_r = {'raw': ('window.__automaRecorrido(%d,"%s");' % (pl.id, r.x_pdf.decode())).encode(), 'mimetype': 'text/javascript', 'description': v_r}
+                    if att_r:
+                        att_r.write(vals_r)
+                    else:
+                        att_r = Att.create(dict(vals_r, name=nom_r, res_model='x_automa_obra', res_id=0))
+                keep.append(att_r.id)
+                ultimo = {'fecha': str(r.x_fecha or ''), 'tecnico': r.x_tecnico or '', 'url': '/web/content/%d?access_token=%s' % (att_r.id, att_r.generate_access_token()[0]), 'v': v_r}
+                break
         planos.append({
             'id': pl.id,
             'tipo': pl.x_name or (pl.x_archivo_name or 'Plano').rsplit('.', 1)[0],
@@ -202,6 +231,7 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
             'archivo': pl.x_archivo_name or 'Plano.pdf',
             'plano': '/web/content/%d?access_token=%s' % (att.id, token),
             'v': version,
+            'ultimo': ultimo,
         })
     if not planos:
         continue
@@ -212,7 +242,7 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
         'cliente': so.partner_id.name or '',
         'planos': planos,
     })
-Att.search([('name', '=like', 'automa_plano_%.js'), ('res_model', '=', 'x_automa_obra'), ('id', 'not in', keep)]).unlink()
+Att.search(['|', ('name', '=like', 'automa_plano_%.js'), ('name', '=like', 'automa_rec_%.js'), ('res_model', '=', 'x_automa_obra'), ('id', 'not in', keep)]).unlink()
 cat = env.ref('automa_recorridos.catalogo_planos').sudo()
 cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), 'mimetype': 'text/javascript'})
 </field>
@@ -248,6 +278,20 @@ cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), '
         <field name="usage">base_automation</field>
         <field name="state">code</field>
         <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().with_context(excluir_planos=records.ids).run()</field>
+    </record>
+    <record id="automation_planos_recorrido" model="base.automation">
+        <field name="name">Recorridos: publicar último recorrido de cada plano</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_recorrido_pdf'), ref('field_recorrido_fecha'), ref('field_recorrido_plano_id')])]"/>
+    </record>
+    <record id="action_planos_recorrido" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos (recorrido)</field>
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="base_automation_id" ref="automation_planos_recorrido"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().run()</field>
     </record>
     <record id="automation_planos_obra" model="base.automation">
         <field name="name">Recorridos: quitar/poner plano al cambiar status de la obra</field>
