@@ -34,11 +34,13 @@ Guarda en Odoo los recorridos que hacen los técnicos con la app
 
 ## Planos de obras (la app los baja de Odoo)
 
-- En la **orden de venta** hay un campo **Plano del proyecto**: sube ahí el PDF.
+- En la **orden de venta**, pestaña **Planos**: sube los que necesites
+  (Canalizaciones, Especiales, Trayectorias u Otro). Al abrir uno se ve la
+  vista previa.
 - Una obra está **viva** si su orden tiene plano y la obra no está en
   *Completado* ni *Cancelado*. Solo las vivas aparecen en la app.
-- En la app, **Planos de obras** lista las obras vivas; al abrir uno, el
-  recorrido queda ligado a esa orden. Los planos bajados se guardan en el iPad
+- En la app, **Planos de obras** lista las obras vivas; se elige el plano y el
+  recorrido queda ligado a esa orden y a ese plano. Los planos bajados se guardan en el iPad
   para usarlos sin señal.
 - Tras actualizar el módulo, vuelve a mandar el enlace de **Conectar app de
   técnicos** (ahora trae también el acceso a los planos).

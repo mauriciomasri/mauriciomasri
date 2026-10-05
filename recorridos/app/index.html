@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 23;
+  const APP_VERSION = 24;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -324,7 +324,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       probe.destroy();
       const obra = meta?.obra || "";
       startSession(base instanceof Uint8Array ? base : new Uint8Array(base), marks,
-        { obra, tecnico: meta?.tecnico || S.meta.tecnico, fecha: today(), rid: meta?.rid, order_id: meta?.order_id }, 1, true, meta && meta.fecha ? meta : null);
+        { obra, tecnico: meta?.tecnico || S.meta.tecnico, fecha: today(), rid: meta?.rid, order_id: meta?.order_id, plano_id: meta?.plano_id, plano: meta?.plano }, 1, true, meta && meta.fecha ? meta : null);
     } catch (e) {
       $("busy").hidden = true;
       toast("No se pudo abrir ese archivo. Revisa que sea un PDF.");
@@ -427,7 +427,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     quickT = setTimeout(() => { q.hidden = true; }, 6000);
   }
   function refreshHeader() {
-    $("obraLbl").textContent = S.meta.obra || "Obra sin nombre";
+    $("obraLbl").textContent = (S.meta.obra || "Obra sin nombre") + (S.meta.plano ? " · " + S.meta.plano.split(" - ")[0] : "");
     $("metaLbl").textContent = `${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
   }
 
@@ -941,7 +941,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     let ob = safe(S.meta.obra || "Obra"), obs = 40;
     while (obs > 18 && font.widthOfTextAtSize(ob, obs) > W - 2 * M - 40) obs -= 2;
     center(cv, fit(ob, obs, font, W - 2 * M), obs, font, 330, INK);
-    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.length} salidas revisadas`, 11, fontR, 300, GRAY);
+    if (S.meta.plano) center(cv, S.meta.plano, 13, font, 304, INK);
+    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.length} salidas revisadas`, 11, fontR, S.meta.plano ? 282 : 300, GRAY);
     const bw = 460, bx = (W - bw) / 2, byy = 230;
     let xx = bx;
     for (const k of ORDER) { const w = bw * cnt[k] / total; if (w > 0) cv.drawRectangle({ x: xx, y: byy, width: w, height: 14, color: rgb(...ST[k].rgb) }); xx += w; }
@@ -1090,7 +1091,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   async function openHist() {
     const all = (await DB.histAll()).sort((a, b) => (b.meta.fecha || "").localeCompare(a.meta.fecha || "") || b.savedAt - a.savedAt);
     const row = h => `<div class="hrow">
-        <div class="hinfo"><b>${esc(h.meta.obra || "Obra")}</b><span>${fmtFecha(h.meta.fecha)} · ${esc(h.meta.tecnico || "")}</span>
+        <div class="hinfo"><b>${esc(h.meta.obra || "Obra")}</b><span>${h.meta.plano ? esc(h.meta.plano) + " · " : ""}${fmtFecha(h.meta.fecha)} · ${esc(h.meta.tecnico || "")}</span>
           <span class="hcnt"><i class="c-rojo">●${h.counts.rojo}</i> <i class="c-amarillo">●${h.counts.amarillo}</i> <i class="c-azul">●${h.counts.azul}</i> <i class="c-verde">●${h.counts.verde}</i></span></div>
         <button type="button" class="btn primary" data-open="${esc(h.rid)}">Abrir</button>
         <button type="button" class="btn danger" data-del="${esc(h.rid)}" aria-label="Borrar de este celular">✕</button>
@@ -1101,7 +1102,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       $("sheetHost").querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
         const h = all.find(x => x.rid === b.dataset.open); if (!h) return;
         closeSheet(); $("busy").hidden = false;
-        startSession(new Uint8Array(h.bytes), migrate(h.marks, 2), { obra: h.meta.obra, tecnico: h.meta.tecnico || S.meta.tecnico, fecha: today(), rid: h.meta.rid, order_id: h.meta.order_id }, 1, true, h.meta);
+        startSession(new Uint8Array(h.bytes), migrate(h.marks, 2), { obra: h.meta.obra, tecnico: h.meta.tecnico || S.meta.tecnico, fecha: today(), rid: h.meta.rid, order_id: h.meta.order_id, plano_id: h.meta.plano_id, plano: h.meta.plano }, 1, true, h.meta);
       });
       $("sheetHost").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
         if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "¿Borrar?"; return; }
@@ -1160,25 +1161,37 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     }
     $("busy").hidden = true; $("busy").textContent = "Cargando plano…";
     if (!lista) { toast("Sin señal: no se pudo bajar la lista de planos"); return; }
+    lista = (lista || []).filter(it => it.planos && it.planos.length);
     const guardados = {};
-    for (const it of lista) { const c = await DB.planGet(it.order_id); guardados[it.order_id] = !!(c && c.v === it.v); }
+    for (const it of lista) { let n = 0; for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); if (c && c.v === pl.v) n++; } guardados[it.order_id] = n; }
     sheet(`<h2>Planos de obras</h2>
       <p class="note">${offline ? "Sin señal: se muestra la última lista. Solo abren los planos marcados como guardados." : "Obras vivas en Odoo. El plano se guarda en este iPad para usarlo sin señal."}</p>
       <div class="hlist">${lista.map(it => `<div class="hrow">
-          <div class="hinfo"><b>${esc(it.obra)}</b><span>${esc(it.orden)} · ${esc(it.cliente)}</span>${guardados[it.order_id] ? '<span class="c-verde">✓ Guardado en este iPad</span>' : ""}</div>
+          <div class="hinfo"><b>${esc(it.obra)}</b><span>${esc(it.orden)} · ${esc(it.cliente)} · ${it.planos.length} plano${it.planos.length > 1 ? "s" : ""}</span>${guardados[it.order_id] ? `<span class="c-verde">✓ ${guardados[it.order_id]} guardado${guardados[it.order_id] > 1 ? "s" : ""} en este iPad</span>` : ""}</div>
           <button type="button" class="btn primary" data-plano="${it.order_id}">Abrir</button></div>`).join("") || '<p class="note">No hay obras vivas con plano. En Odoo sube el plano en la orden de venta.</p>'}</div>`, () => {
-      $("sheetHost").querySelectorAll("[data-plano]").forEach(b => b.onclick = () => abrirPlano(lista.find(x => String(x.order_id) === b.dataset.plano), base));
+      $("sheetHost").querySelectorAll("[data-plano]").forEach(b => b.onclick = () => elegirPlano(lista.find(x => String(x.order_id) === b.dataset.plano), base));
     });
   }
-  async function abrirPlano(it, base) {
-    let c = await DB.planGet(it.order_id), bytes = null;
-    if (c && c.v === it.v) bytes = c.bytes;
+  async function elegirPlano(it, base) {
+    if (it.planos.length === 1) return abrirPlano(it, it.planos[0], base);
+    const ok = {};
+    for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); ok[pl.id] = !!(c && c.v === pl.v); }
+    sheet(`<h2>${esc(it.obra)}</h2><p class="note">¿Qué plano vas a recorrer?</p>
+      <div class="hlist">${it.planos.map(pl => `<div class="hrow">
+        <div class="hinfo"><b>${esc(pl.tipo)}</b><span>${esc(pl.nombre)}</span>${ok[pl.id] ? '<span class="c-verde">✓ Guardado en este iPad</span>' : ""}</div>
+        <button type="button" class="btn primary" data-pl="${pl.id}">Abrir</button></div>`).join("")}</div>`, () => {
+      $("sheetHost").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => abrirPlano(it, it.planos.find(x => String(x.id) === b.dataset.pl), base));
+    });
+  }
+  async function abrirPlano(it, pl, base) {
+    let c = await DB.planGet("p" + pl.id), bytes = null;
+    if (c && c.v === pl.v) bytes = c.bytes;
     else {
       closeSheet(); $("busy").hidden = false; $("busy").textContent = "Descargando plano…";
       try {
-        const [, b64] = await loadJs(base.origin + it.plano, "__automaPlano");
+        const [, b64] = await loadJs(base.origin + pl.plano, "__automaPlano");
         bytes = b64ToBytes(b64);
-        await DB.planPut(it.order_id, { v: it.v, bytes, item: it });
+        await DB.planPut("p" + pl.id, { v: pl.v, bytes, item: it, plano: pl });
       } catch (e) {
         $("busy").hidden = true; $("busy").textContent = "Cargando plano…";
         if (c) { bytes = c.bytes; toast("Sin señal: se abre la versión guardada del plano"); }
@@ -1187,17 +1200,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       $("busy").textContent = "Cargando plano…";
     }
     // ¿Ya hay un recorrido de esta obra en este iPad? Ofrecer partir de él.
-    const prev = (await DB.histAll()).filter(h => h.meta.order_id === it.order_id || (h.meta.obra || "").toLowerCase() === (it.obra || "").toLowerCase())
+    const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
+    const prev = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id)
       .sort((a, b) => b.savedAt - a.savedAt)[0];
-    const limpio = () => { closeSheet(); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id }, 1, true); };
+    const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
+    const limpio = () => { closeSheet(); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
     if (!prev) return limpio();
     $("busy").hidden = true;
-    sheet(`<h2>${esc(it.obra)}</h2>
-      <p class="note">Ya tienes un recorrido de esta obra del ${fmtFecha(prev.meta.fecha)} en este iPad.</p>
+    sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2>
+      <p class="note">Ya tienes un recorrido de este plano del ${fmtFecha(prev.meta.fecha)} en este iPad.</p>
       <div class="stack"><button type="button" class="btn primary" id="plPrev">Partir de ese recorrido</button><button type="button" class="btn" id="plClean">Plano limpio</button></div>`, () => {
       $("plClean").onclick = limpio;
       $("plPrev").onclick = () => { closeSheet(); $("busy").hidden = false;
-        startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { obra: prev.meta.obra, tecnico: prev.meta.tecnico || S.meta.tecnico, fecha: today(), rid: newId(), order_id: it.order_id }, 1, true); };
+        startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { ...meta, obra: prev.meta.obra || it.obra, tecnico: prev.meta.tecnico || S.meta.tecnico, rid: newId() }, 1, true); };
     });
   }
   $("planosBtn").onclick = openPlanos;
@@ -1239,7 +1254,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   async function queueOdoo(file) {
     const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
-    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, ...c, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
+    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano: S.meta.plano || "", ...c, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
     await DB.outPut(S.meta.rid, { body, obra: S.meta.obra, fecha: S.meta.fecha, at: Date.now() });
     await paintPending();
     return flushOdoo(true);

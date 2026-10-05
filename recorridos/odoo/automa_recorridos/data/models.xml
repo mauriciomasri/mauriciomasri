@@ -288,6 +288,73 @@
         <field name="ttype">char</field>
     </record>
 
+    <!-- Varios planos por orden de venta: canalizaciones, especiales, trayectorias… -->
+    <record id="model_x_automa_plano" model="ir.model">
+        <field name="name">Plano de obra</field>
+        <field name="model">x_automa_plano</field>
+    </record>
+    <record id="field_plano_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="name">x_name</field>
+        <field name="field_description">Descripción</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_plano_tipo" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="name">x_tipo</field>
+        <field name="field_description">Tipo</field>
+        <field name="ttype">selection</field>
+        <field name="selection">[('canalizaciones', 'Canalizaciones'), ('especiales', 'Especiales'), ('trayectorias', 'Trayectorias'), ('otro', 'Otro')]</field>
+    </record>
+    <record id="default_plano_tipo" model="ir.default">
+        <field name="field_id" ref="field_plano_tipo"/>
+        <field name="json_value">"canalizaciones"</field>
+    </record>
+    <record id="field_plano_archivo" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="name">x_archivo</field>
+        <field name="field_description">PDF</field>
+        <field name="ttype">binary</field>
+    </record>
+    <record id="field_plano_archivo_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="name">x_archivo_name</field>
+        <field name="field_description">Archivo</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_plano_order" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="name">x_order_id</field>
+        <field name="field_description">Orden de venta</field>
+        <field name="ttype">many2one</field>
+        <field name="relation">sale.order</field>
+        <field name="on_delete">cascade</field>
+        <field name="index">True</field>
+    </record>
+    <record id="field_order_plano_ids" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_plano_ids</field>
+        <field name="field_description">Planos</field>
+        <field name="ttype">one2many</field>
+        <field name="relation">x_automa_plano</field>
+        <field name="relation_field">x_order_id</field>
+    </record>
+    <record id="field_recorrido_plano" model="ir.model.fields">
+        <field name="model_id" ref="model_x_automa_recorrido"/>
+        <field name="name">x_plano</field>
+        <field name="field_description">Plano</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="access_x_automa_plano_user" model="ir.model.access">
+        <field name="name">x_automa_plano usuarios</field>
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
     <!-- Permisos: usuarios internos -->
     <record id="access_x_automa_obra_user" model="ir.model.access">
         <field name="name">x_automa_obra usuarios</field>

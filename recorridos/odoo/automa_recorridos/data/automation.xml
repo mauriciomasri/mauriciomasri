@@ -78,10 +78,11 @@ if not obra and obra_txt:
         obra = Obra.create(vo)
 
 vals = {
-    'x_name': ('Recorrido %s %s' % (obra_txt, fecha or '')).strip(),
+    'x_name': ('Recorrido %s %s %s' % (obra_txt, (p.get('plano') or '').strip(), fecha or '')).replace('  ', ' ').strip(),
     'x_obra': obra_txt,
     'x_fecha': fecha,
     'x_tecnico': (p.get('tecnico') or '').strip(),
+    'x_plano': (p.get('plano') or '').strip(),
     'x_rojo': rojo, 'x_amarillo': amarillo, 'x_azul': azul, 'x_verde': verde,
     'x_total': total,
     'x_pct_cableado': round(100.0 * (azul + verde) / total, 1) if total else 0.0,
@@ -145,52 +146,88 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
         <field name="code">SO = env['sale.order'].sudo()
 Att = env['ir.attachment'].sudo()
 Obra = env['x_automa_obra'].sudo()
+Plano = env['x_automa_plano'].sudo()
+excluir = env.context.get('excluir_planos') or []
+# El plano único de la v1.7 pasa a la lista de planos de la orden.
+for so in SO.search([('x_plano', '!=', False)]):
+    datos, nom = so.x_plano, so.x_plano_name
+    so.write({'x_plano': False, 'x_plano_name': False})
+    Plano.create({'x_order_id': so.id, 'x_tipo': 'canalizaciones', 'x_name': nom or 'Plano', 'x_archivo': datos, 'x_archivo_name': nom or 'Plano.pdf'})
+tipos = {'canalizaciones': 'Canalizaciones', 'especiales': 'Especiales', 'trayectorias': 'Trayectorias', 'otro': 'Otro'}
 items = []
 keep = []
-for so in SO.search([('x_plano', '!=', False)], order='date_order desc'):
+for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
     obra = Obra.search([('x_order_id', '=', so.id)], limit=1)
     if obra and obra.x_estado in ('completado', 'cancelado'):
         continue
-    src = Att.search([('res_model', '=', 'sale.order'), ('res_id', '=', so.id), ('res_field', '=', 'x_plano')], limit=1)
-    version = src.checksum or str(so.write_date)
-    nombre = 'automa_plano_%s.js' % so.id
-    att = Att.search([('name', '=', nombre), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)], limit=1)
-    if not att or att.description != version:
-        js = 'window.__automaPlano(%d,"%s");' % (so.id, so.x_plano.decode())
-        vals = {'raw': js.encode(), 'mimetype': 'text/javascript', 'description': version}
-        if att:
-            att.write(vals)
-        else:
-            att = Att.create(dict(vals, name=nombre, res_model='x_automa_obra', res_id=0))
-    token = att.generate_access_token()[0]
-    keep.append(att.id)
+    planos = []
+    for pl in so.x_plano_ids:
+        if pl.id in excluir or not pl.x_archivo:
+            continue
+        src = Att.search([('res_model', '=', 'x_automa_plano'), ('res_id', '=', pl.id), ('res_field', '=', 'x_archivo')], limit=1)
+        version = src.checksum or str(pl.write_date)
+        nombre = 'automa_plano_%s.js' % pl.id
+        att = Att.search([('name', '=', nombre), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)], limit=1)
+        if not att or att.description != version:
+            js = 'window.__automaPlano(%d,"%s");' % (pl.id, pl.x_archivo.decode())
+            vals = {'raw': js.encode(), 'mimetype': 'text/javascript', 'description': version}
+            if att:
+                att.write(vals)
+            else:
+                att = Att.create(dict(vals, name=nombre, res_model='x_automa_obra', res_id=0))
+        token = att.generate_access_token()[0]
+        keep.append(att.id)
+        planos.append({
+            'id': pl.id,
+            'tipo': tipos.get(pl.x_tipo, 'Plano'),
+            'nombre': pl.x_name or pl.x_archivo_name or 'Plano',
+            'archivo': pl.x_archivo_name or 'Plano.pdf',
+            'plano': '/web/content/%d?access_token=%s' % (att.id, token),
+            'v': version,
+        })
+    if not planos:
+        continue
     items.append({
         'order_id': so.id,
         'orden': so.name,
         'obra': obra.x_name if obra else (so.client_order_ref or so.partner_id.name or so.name),
         'cliente': so.partner_id.name or '',
-        'archivo': so.x_plano_name or 'Plano.pdf',
-        'plano': '/web/content/%d?access_token=%s' % (att.id, token),
-        'v': version,
+        'planos': planos,
     })
 Att.search([('name', '=like', 'automa_plano_%.js'), ('res_model', '=', 'x_automa_obra'), ('id', 'not in', keep)]).unlink()
 cat = env.ref('automa_recorridos.catalogo_planos').sudo()
 cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), 'mimetype': 'text/javascript'})
 </field>
     </record>
-    <record id="automation_planos_orden" model="base.automation">
-        <field name="name">Recorridos: publicar plano al subirlo a la orden</field>
-        <field name="model_id" ref="sale.model_sale_order"/>
+    <!-- v1.7: un solo plano en la orden; ahora son varios (x_automa_plano) -->
+    <delete model="ir.actions.server" id="action_planos_orden"/>
+    <delete model="base.automation" id="automation_planos_orden"/>
+    <record id="automation_planos_plano" model="base.automation">
+        <field name="name">Recorridos: publicar planos al subirlos o cambiarlos</field>
+        <field name="model_id" ref="model_x_automa_plano"/>
         <field name="trigger">on_create_or_write</field>
-        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_order_plano')])]"/>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_order')])]"/>
     </record>
-    <record id="action_planos_orden" model="ir.actions.server">
-        <field name="name">Recorridos: publicar planos (orden)</field>
-        <field name="model_id" ref="sale.model_sale_order"/>
-        <field name="base_automation_id" ref="automation_planos_orden"/>
+    <record id="action_planos_plano" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos (plano)</field>
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="base_automation_id" ref="automation_planos_plano"/>
         <field name="usage">base_automation</field>
         <field name="state">code</field>
         <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().run()</field>
+    </record>
+    <record id="automation_planos_borrar" model="base.automation">
+        <field name="name">Recorridos: quitar plano borrado de la app</field>
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="trigger">on_unlink</field>
+    </record>
+    <record id="action_planos_borrar" model="ir.actions.server">
+        <field name="name">Recorridos: publicar planos (borrado)</field>
+        <field name="model_id" ref="model_x_automa_plano"/>
+        <field name="base_automation_id" ref="automation_planos_borrar"/>
+        <field name="usage">base_automation</field>
+        <field name="state">code</field>
+        <field name="code">env.ref('automa_recorridos.action_reconstruir_planos').sudo().with_context(excluir_planos=records.ids).run()</field>
     </record>
     <record id="automation_planos_obra" model="base.automation">
         <field name="name">Recorridos: quitar/poner plano al cambiar status de la obra</field>
