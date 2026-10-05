@@ -170,7 +170,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
         </ol>
-        <p>Para corregir un recorrido o hacer el siguiente de la misma obra, ábrelo en <b>Mis recorridos</b>. Si otro técnico te mandó su PDF, usa <b>Cargar recorrido anterior</b>.</p>
+        <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>. Si te mandaron el PDF de un recorrido, usa <b>Cargar recorrido anterior</b>.</p>
         <div class="actions">
           <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
           <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 25;
+  const APP_VERSION = 26;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1086,7 +1086,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   async function paintHistBtn() {
     const n = (await DB.histAll()).length, b = $("histBtn");
-    b.hidden = !n; b.textContent = `Mis recorridos (${n})`;
+    // El botón ya no se muestra: los recorridos se retoman desde Planos de obras. La copia local se sigue usando ahí (y sin señal).
+    b.hidden = true; b.textContent = `Mis recorridos (${n})`;
   }
   async function openHist() {
     const all = (await DB.histAll()).sort((a, b) => (b.meta.fecha || "").localeCompare(a.meta.fecha || "") || b.savedAt - a.savedAt);
