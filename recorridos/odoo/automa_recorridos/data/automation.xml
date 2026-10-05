@@ -9,6 +9,15 @@
         <field name="trigger">on_webhook</field>
         <field name="record_getter">model.search([('x_app_uid', '=', payload.get('uid') or 'sin-uid')], limit=1) or model.create({'x_name': 'Recorrido', 'x_app_uid': payload.get('uid') or False})</field>
     </record>
+    <record id="tipo_canalizaciones" model="x_recorrido_plano_tipo"><field name="x_name">Canalizaciones</field></record>
+    <record id="tipo_iluminacion" model="x_recorrido_plano_tipo"><field name="x_name">Iluminación</field></record>
+    <record id="tipo_especiales" model="x_recorrido_plano_tipo"><field name="x_name">Especiales</field></record>
+    <record id="tipo_trayectorias" model="x_recorrido_plano_tipo"><field name="x_name">Trayectorias</field></record>
+    <record id="default_plano_tipo_id" model="ir.default">
+        <field name="field_id" ref="field_plano_tipo_id"/>
+        <field name="json_value" eval="str(ref('tipo_canalizaciones'))"/>
+    </record>
+
     <!-- Catálogo de planos de obras vivas que lee la app de técnicos (archivo JS público con clave) -->
     <record id="catalogo_planos" model="ir.attachment">
         <field name="name">automa_catalogo_planos.js</field>
@@ -154,6 +163,17 @@ for so in SO.search([('x_plano', '!=', False)]):
     so.write({'x_plano': False, 'x_plano_name': False})
     Plano.create({'x_order_id': so.id, 'x_tipo': 'canalizaciones', 'x_name': nom or 'Plano', 'x_archivo': datos, 'x_archivo_name': nom or 'Plano.pdf'})
 tipos = {'canalizaciones': 'Canalizaciones', 'iluminacion': 'Iluminación', 'especiales': 'Especiales', 'trayectorias': 'Trayectorias'}
+Tipo = env['x_recorrido_plano_tipo'].sudo()
+# v1.8.3 tenía el tipo como lista fija: se pasa al tipo libre (en grupos, para no encadenar automatizaciones).
+por_tipo = {}
+for pl in Plano.search([('x_tipo_id', '=', False)]):
+    nombre_tipo = (pl.x_tipo_texto or 'Personalizado') if pl.x_tipo == 'otro' else tipos.get(pl.x_tipo or 'canalizaciones', 'Canalizaciones')
+    por_tipo.setdefault(nombre_tipo, []).append(pl.id)
+for nombre_tipo, ids in por_tipo.items():
+    pend = Plano.search([('id', 'in', ids), ('x_tipo_id', '=', False)])
+    if pend:
+        t = Tipo.search([('x_name', '=ilike', nombre_tipo)], limit=1) or Tipo.create({'x_name': nombre_tipo})
+        pend.write({'x_tipo_id': t.id})
 items = []
 keep = []
 for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
@@ -180,7 +200,7 @@ for so in SO.search([('x_plano_ids', '!=', False)], order='date_order desc'):
         keep.append(att.id)
         planos.append({
             'id': pl.id,
-            'tipo': (pl.x_tipo_texto or 'Personalizado') if pl.x_tipo == 'otro' else tipos.get(pl.x_tipo, 'Plano'),
+            'tipo': pl.x_tipo_id.x_name or 'Plano',
             'nombre': pl.x_name or pl.x_archivo_name or 'Plano',
             'archivo': pl.x_archivo_name or 'Plano.pdf',
             'plano': '/web/content/%d?access_token=%s' % (att.id, token),
@@ -207,7 +227,7 @@ cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), '
         <field name="name">Recorridos: publicar planos al subirlos o cambiarlos</field>
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="trigger">on_create_or_write</field>
-        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_tipo_texto'), ref('field_plano_order')])]"/>
+        <field name="trigger_field_ids" eval="[(6, 0, [ref('field_plano_archivo'), ref('field_plano_name'), ref('field_plano_tipo'), ref('field_plano_tipo_texto'), ref('field_plano_tipo_id'), ref('field_plano_order')])]"/>
     </record>
     <record id="action_planos_plano" model="ir.actions.server">
         <field name="name">Recorridos: publicar planos (plano)</field>
