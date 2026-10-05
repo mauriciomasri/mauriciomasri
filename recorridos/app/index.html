@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 27;
+  const APP_VERSION = 28;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1173,6 +1173,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       lista = (await loadJs(`${base.origin}/web/content/${base.id}?access_token=${base.token}`, "__automaPlanos", 30000))[0];
       try { localStorage.setItem("automa-cat", JSON.stringify(lista)); } catch (e) {}
     } catch (e) {
+      if (e.message === "red" && await conexionVigente() === false) { $("busy").hidden = true; $("busy").textContent = "Cargando plano…"; conexionVencida(); return; }
       offline = true;
       try { lista = JSON.parse(localStorage.getItem("automa-cat") || "null"); } catch (er) {}
     }
@@ -1306,12 +1307,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return flushOdoo(true);
   }
   let flushing = false;
+  // ¿Sigue valiendo el enlace de Odoo? true / false (Mauricio generó uno nuevo) / null (sin señal o no se sabe).
+  async function conexionVigente() {
+    const b = planosBase(); if (!b) return null;
+    try { await fetch(b.origin + "/web/login", { mode: "no-cors", cache: "no-store" }); } catch (e) { return null; }
+    try { await loadJs(`${b.origin}/web/content/${b.id}?access_token=${b.token}`, "__automaPlanos", 20000); return true; }
+    catch (e) { return e.message === "red" ? false : null; }
+  }
+  // Enlace viejo: se desconecta la app (los recorridos sin subir se quedan guardados y suben al conectar el enlace nuevo).
+  function conexionVencida() {
+    setOdoo(""); try { localStorage.removeItem(PLANOS_KEY); localStorage.removeItem("automa-cat"); } catch (e) {}
+    paintPlanosBtn();
+    sheet(`<h2>El enlace de Odoo cambió</h2>
+      <p class="note">Este equipo tenía un enlace que ya no funciona. Pide el enlace nuevo y pégalo en <b>Conectar con Odoo</b>. Tus recorridos sin subir se quedan guardados y se suben al conectar.</p>
+      <div class="stack"><button type="button" class="btn primary" id="vcOk">Conectar con Odoo</button></div>`, () => { $("vcOk").onclick = () => { closeSheet(); $("conectarBtn").click(); }; });
+  }
   async function flushOdoo(verbose) {
     const url = getOdoo();
     if (!url || flushing) return;
     flushing = true;
     const items = await DB.outAll();
     if (!items.length) { flushing = false; return; }
+    if (await conexionVigente() === false) { flushing = false; conexionVencida(); return; }
     let ok = 0, fail = 0;
     for (const [k, v] of items) {
       try {

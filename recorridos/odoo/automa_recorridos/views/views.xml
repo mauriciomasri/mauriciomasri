@@ -286,6 +286,23 @@
         </field>
     </record>
 
+    <record id="view_conexion_form" model="ir.ui.view">
+        <field name="name">x_recorrido_conexion.form</field>
+        <field name="model">x_recorrido_conexion</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0" duplicate="0">
+                <sheet>
+                    <div class="oe_title"><h1>Conectar app de técnicos</h1></div>
+                    <p>Copia este enlace y mándalo a tus técnicos. Lo abren en su iPad (o lo pegan en <b>Conectar con Odoo</b> dentro de la app) y quedan conectados: ven los planos de obras vivas y sus recorridos se guardan aquí.</p>
+                    <field name="x_enlace" widget="CopyClipboardChar" nolabel="1" readonly="1"/>
+                    <div class="alert alert-warning mt-4" role="alert">
+                        <b>¿Alguien dejó de trabajar contigo?</b> Genera un enlace nuevo: el anterior deja de funcionar en todos los equipos. Después manda el nuevo solo a los técnicos que siguen.
+                    </div>
+                    <button name="%(automa_recorridos.action_nuevo_enlace)d" type="action" string="Generar enlace nuevo" class="btn-danger" confirm="El enlace actual dejará de funcionar en TODOS los equipos y tendrás que mandar el nuevo a los técnicos que siguen. ¿Continuar?"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
     <menuitem id="menu_root" name="Recorridos" web_icon="automa_recorridos,static/description/icon.png" sequence="6" action="action_obras"/>
     <!-- El ícono va incrustado en el menú para que el navegador no muestre una versión guardada vieja -->
     <record id="menu_root" model="ir.ui.menu">

@@ -332,17 +332,37 @@ cat.write({'raw': ('window.__automaPlanos(%s);' % json.dumps(items)).encode(), '
     </function>
 
     <!-- Botón de menú: abre la app de técnicos ya conectada a este Odoo -->
+    <record id="conexion_app" model="x_recorrido_conexion">
+        <field name="x_name">App de técnicos</field>
+    </record>
     <record id="action_conectar_app" model="ir.actions.server">
         <field name="name">Conectar app de técnicos</field>
         <field name="model_id" ref="model_x_automa_recorrido"/>
         <field name="state">code</field>
-        <field name="code">rule = env.ref('automa_recorridos.automation_webhook_recorrido')
-cat = env.ref('automa_recorridos.catalogo_planos').sudo()
+        <field name="code">env.ref('automa_recorridos.catalogo_planos').sudo().generate_access_token()
 action = {
-    'type': 'ir.actions.act_url',
-    'target': 'new',
-    'url': 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=' + (rule.url or '') + '&amp;planos=%s:%s' % (cat.id, cat.generate_access_token()[0]),
+    'type': 'ir.actions.act_window',
+    'name': 'Conectar app de técnicos',
+    'res_model': 'x_recorrido_conexion',
+    'res_id': env.ref('automa_recorridos.conexion_app').id,
+    'view_mode': 'form',
+    'views': [(env.ref('automa_recorridos.view_conexion_form').id, 'form')],
+    'target': 'current',
 }
+</field>
+    </record>
+    <!-- Enlace nuevo: el anterior deja de funcionar en todos los equipos (webhook, catálogo y planos con clave nueva). -->
+    <record id="action_nuevo_enlace" model="ir.actions.server">
+        <field name="name">Generar enlace nuevo</field>
+        <field name="model_id" ref="model_x_recorrido_conexion"/>
+        <field name="state">code</field>
+        <field name="code">env.ref('automa_recorridos.automation_webhook_recorrido').sudo().action_rotate_webhook_uuid()
+cat = env.ref('automa_recorridos.catalogo_planos').sudo()
+cat.write({'access_token': False})
+cat.generate_access_token()
+env['ir.attachment'].sudo().search(['|', ('name', '=like', 'automa_plano_%.js'), ('name', '=like', 'automa_rec_%.js'), ('res_model', '=', 'x_automa_obra'), ('res_id', '=', 0)]).unlink()
+env.ref('automa_recorridos.action_reconstruir_planos').sudo().run()
+action = env.ref('automa_recorridos.action_conectar_app').sudo().run()
 </field>
     </record>
     <!-- Botón "Enviar con planos" en la cotización: abre el correo de siempre con los PDF de la pestaña Planos ya adjuntos (se quitan con la ✕). -->

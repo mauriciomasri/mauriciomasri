@@ -446,5 +446,36 @@
         <field name="perm_create" eval="True"/>
         <field name="perm_unlink" eval="True"/>
     </record>
+    <!-- Pantalla "Conectar app de técnicos": enlace para copiar y botón para cambiarlo -->
+    <record id="model_x_recorrido_conexion" model="ir.model">
+        <field name="name">Conexión de la app de técnicos</field>
+        <field name="model">x_recorrido_conexion</field>
+    </record>
+    <record id="field_conexion_name" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_conexion"/>
+        <field name="name">x_name</field>
+        <field name="field_description">Nombre</field>
+        <field name="ttype">char</field>
+    </record>
+    <record id="field_conexion_enlace" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_conexion"/>
+        <field name="name">x_enlace</field>
+        <field name="field_description">Enlace para los técnicos</field>
+        <field name="ttype">char</field>
+        <field name="store" eval="False"/>
+        <field name="compute">rule = self.env.ref('automa_recorridos.automation_webhook_recorrido').sudo()
+cat = self.env.ref('automa_recorridos.catalogo_planos').sudo()
+for rec in self:
+    rec['x_enlace'] = 'https://mauriciomasri.github.io/mauriciomasri/recorridos/app/?odoo=%s&amp;planos=%s:%s' % (rule.url or '', cat.id, cat.access_token or '')</field>
+    </record>
+    <record id="access_x_recorrido_conexion_admin" model="ir.model.access">
+        <field name="name">x_recorrido_conexion admin</field>
+        <field name="model_id" ref="model_x_recorrido_conexion"/>
+        <field name="group_id" ref="base.group_system"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
 </data>
 </odoo>
