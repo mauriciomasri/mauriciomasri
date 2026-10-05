@@ -249,6 +249,13 @@
                 <field name="x_archivo" widget="binary" filename="x_archivo_name" string="Archivo"/>
                 <field name="x_order_id" optional="hide"/>
                 <field name="create_date" string="Subido" widget="date"/>
+                <field name="x_es_pdf" column_invisible="1"/>
+                <field name="x_firma" widget="badge" optional="show" decoration-success="x_firma == 'firmado'" decoration-info="x_firma == 'enviado'" decoration-warning="x_firma in ('pendiente', 'modificado', 'vencido')" decoration-danger="x_firma == 'cancelado'"/>
+                <button name="%(automa_recorridos.action_mandar_firma)d" type="action" string="Mandar a firmar" icon="fa-pencil" invisible="not x_es_pdf or x_firma in ('enviado', 'firmado')"
+                        confirm="Se manda este plano a firma al cliente de la orden, por correo desde planos@automaproyecto.com, con firma en cada página. ¿Continuar?"/>
+                <button name="%(automa_recorridos.action_mandar_firma)d" type="action" string="Reenviar" icon="fa-repeat" invisible="x_firma != 'enviado'"
+                        confirm="Se cancela la solicitud anterior y se vuelve a mandar a firma. ¿Continuar?"/>
+                <button name="%(automa_recorridos.action_ver_firmado_plano)d" type="action" string="Ver firmado" icon="fa-download" invisible="x_firma != 'firmado'"/>
             </list>
         </field>
     </record>
@@ -309,6 +316,13 @@
                             <field name="x_archivo" widget="binary" filename="x_archivo_name" string="Archivo"/>
                             <field name="create_date" string="Subido" widget="date"/>
                             <field name="write_date" string="Actualizado" widget="date" optional="hide"/>
+                            <field name="x_es_pdf" column_invisible="1"/>
+                            <field name="x_firma" widget="badge" optional="show" decoration-success="x_firma == 'firmado'" decoration-info="x_firma == 'enviado'" decoration-warning="x_firma in ('pendiente', 'modificado', 'vencido')" decoration-danger="x_firma == 'cancelado'"/>
+                            <button name="%(automa_recorridos.action_mandar_firma)d" type="action" string="Mandar a firmar" icon="fa-pencil" invisible="not x_es_pdf or x_firma in ('enviado', 'firmado')"
+                                    confirm="Se manda este plano a firma al cliente de la orden, por correo desde planos@automaproyecto.com, con firma en cada página. ¿Continuar?"/>
+                            <button name="%(automa_recorridos.action_mandar_firma)d" type="action" string="Reenviar" icon="fa-repeat" invisible="x_firma != 'enviado'"
+                                    confirm="Se cancela la solicitud anterior y se vuelve a mandar a firma. ¿Continuar?"/>
+                            <button name="%(automa_recorridos.action_ver_firmado_plano)d" type="action" string="Ver firmado" icon="fa-download" invisible="x_firma != 'firmado'"/>
                         </list>
                         <form>
                             <group>

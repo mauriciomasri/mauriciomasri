@@ -393,5 +393,46 @@ composer.write({'attachment_ids': [(6, 0, adjuntos)]})
 action = dict(action, res_id=composer.id, name='Enviar con planos')
 </field>
     </record>
+    <!-- Mandar a firmar un plano de la orden con el módulo Planos (firma en cada página, correo desde planos@) -->
+    <record id="action_mandar_firma" model="ir.actions.server">
+        <field name="name">Mandar a firmar</field>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="state">code</field>
+        <field name="code">if 'x_automa_plano' not in env or not env.ref('automa_planos.action_enviar_firma', raise_if_not_found=False):
+    raise UserError('Para mandar a firmar necesitas el módulo Planos (firma) instalado.')
+rec = record.with_context(bin_size=False)
+if not rec.x_archivo or not (rec.x_archivo_name or '').lower().endswith('.pdf'):
+    raise UserError('Solo se pueden mandar a firmar planos en PDF.')
+so = rec.x_order_id
+P = env['x_automa_plano'].with_context(bin_size=False)
+pl = P.browse(rec.x_firma_id).exists() if rec.x_firma_id else P
+if pl and pl.x_estado == 'firmado' and pl.x_pdf == rec.x_archivo:
+    raise UserError('Este plano ya está firmado. Si subes un archivo nuevo, lo puedes volver a mandar.')
+obra = env['x_automa_obra'].search([('x_order_id', '=', so.id)], limit=1)
+proyecto = '%s - %s' % (obra.x_name if obra else (so.client_order_ref or so.partner_id.name or so.name), rec.x_name or 'Plano')
+fname = (rec.x_name or 'Plano').replace('/', '-')
+if not fname.lower().endswith('.pdf'):
+    fname += '.pdf'
+vals = {'x_name': proyecto, 'x_partner_id': so.partner_id.id, 'x_pdf_filename': fname}
+if not pl or pl.x_pdf != rec.x_archivo:
+    vals['x_pdf'] = rec.x_archivo
+if pl:
+    pl.write(vals)
+else:
+    vals['x_fecha'] = datetime.date.today()
+    pl = P.create(vals)
+    rec.write({'x_firma_id': pl.id})
+action = env.ref('automa_planos.action_enviar_firma').with_context(active_model='x_automa_plano', active_id=pl.id, active_ids=[pl.id]).run()
+</field>
+    </record>
+    <record id="action_ver_firmado_plano" model="ir.actions.server">
+        <field name="name">Ver plano firmado</field>
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="state">code</field>
+        <field name="code">if 'x_automa_plano' not in env or not record.x_firma_id:
+    raise UserError('Este plano no se ha mandado a firmar.')
+action = env.ref('automa_planos.action_ver_firmado').with_context(active_model='x_automa_plano', active_id=record.x_firma_id, active_ids=[record.x_firma_id]).run()
+</field>
+    </record>
 </data>
 </odoo>

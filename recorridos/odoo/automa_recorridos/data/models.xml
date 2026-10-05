@@ -378,6 +378,38 @@
     nombre = rec.x_archivo_name or ''
     rec['x_formato'] = nombre.rsplit('.', 1)[1].upper() if '.' in nombre else ''</field>
     </record>
+    <!-- Firma del cliente con el módulo Planos (automa_planos): se liga sin depender de él -->
+    <record id="field_plano_firma_id" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_firma_id</field>
+        <field name="field_description">Plano en firma (ID)</field>
+        <field name="ttype">integer</field>
+        <field name="readonly" eval="True"/>
+    </record>
+    <record id="field_plano_firma" model="ir.model.fields">
+        <field name="model_id" ref="model_x_recorrido_plano"/>
+        <field name="name">x_firma</field>
+        <field name="field_description">Firma</field>
+        <field name="ttype">selection</field>
+        <field name="selection">[('borrador', 'Borrador'), ('pendiente', 'Pendiente por enviar'), ('enviado', 'Enviado'), ('modificado', 'Modificado'), ('firmado', 'Firmado'), ('vencido', 'Vencido'), ('cancelado', 'Cancelado')]</field>
+        <field name="store" eval="False"/>
+        <field name="depends">x_firma_id</field>
+        <field name="compute">hay = 'x_automa_plano' in self.env
+for rec in self:
+    est = False
+    if hay and rec.x_firma_id:
+        pl = self.env['x_automa_plano'].sudo().browse(rec.x_firma_id).exists()
+        if pl:
+            est = pl.x_estado or False
+            if est == 'firmado':
+                # Si aquí se subió otro archivo después de firmar, se puede volver a mandar.
+                Att = self.env['ir.attachment'].sudo()
+                mio = Att.search([('res_model', '=', 'x_recorrido_plano'), ('res_id', '=', rec.id), ('res_field', '=', 'x_archivo')], limit=1)
+                suyo = Att.search([('res_model', '=', 'x_automa_plano'), ('res_id', '=', pl.id), ('res_field', '=', 'x_pdf')], limit=1)
+                if mio and suyo and mio.checksum != suyo.checksum:
+                    est = 'modificado'
+    rec['x_firma'] = est</field>
+    </record>
     <record id="field_plano_archivo_name" model="ir.model.fields">
         <field name="model_id" ref="model_x_recorrido_plano"/>
         <field name="name">x_archivo_name</field>
