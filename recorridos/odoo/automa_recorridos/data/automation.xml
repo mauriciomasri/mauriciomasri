@@ -140,9 +140,6 @@ for r in env['x_automa_recorrido'].search([('x_obra_id', '=', False)]):
     r.write({'x_obra_id': obra.id})
 </field>
     </record>
-    <function model="ir.actions.server" name="run">
-        <value eval="[ref('action_agrupar_obras')]"/>
-    </function>
 
     <function model="ir.attachment" name="generate_access_token">
         <value eval="[ref('catalogo_planos')]"/>

@@ -76,7 +76,7 @@
         <field name="field_description">Obra</field>
         <field name="ttype">many2one</field>
         <field name="relation">x_automa_obra</field>
-        <field name="on_delete">set null</field>
+        <field name="on_delete">cascade</field>
         <field name="index">True</field>
     </record>
     <record id="field_recorrido_order" model="ir.model.fields">
