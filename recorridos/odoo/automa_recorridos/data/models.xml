@@ -401,6 +401,16 @@
         <field name="relation">x_recorrido_plano</field>
         <field name="relation_field">x_order_id</field>
     </record>
+    <record id="field_order_plano_count" model="ir.model.fields">
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="name">x_plano_count</field>
+        <field name="field_description">Número de planos</field>
+        <field name="ttype">integer</field>
+        <field name="store" eval="False"/>
+        <field name="depends">x_plano_ids</field>
+        <field name="compute">for rec in self:
+    rec['x_plano_count'] = len(rec.x_plano_ids)</field>
+    </record>
     <record id="field_recorrido_plano" model="ir.model.fields">
         <field name="model_id" ref="model_x_automa_recorrido"/>
         <field name="name">x_plano</field>

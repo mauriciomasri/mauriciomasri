@@ -237,6 +237,60 @@
     </record>
 
     <!-- Cotización: botón con los recorridos de esa obra -->
+    <!-- Botón "Planos" de la orden de venta: lista de los planos subidos -->
+    <record id="view_plano_list" model="ir.ui.view">
+        <field name="name">x_recorrido_plano.list</field>
+        <field name="model">x_recorrido_plano</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="x_name"/>
+                <field name="x_formato"/>
+                <field name="x_archivo_name" column_invisible="1"/>
+                <field name="x_archivo" widget="binary" filename="x_archivo_name" string="Archivo"/>
+                <field name="x_order_id" optional="hide"/>
+                <field name="create_date" string="Subido" widget="date"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_plano_form" model="ir.ui.view">
+        <field name="name">x_recorrido_plano.form</field>
+        <field name="model">x_recorrido_plano</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="x_name" required="1" placeholder="Ej. Especiales, Canalizaciones PB…"/>
+                            <field name="x_formato" invisible="not x_formato"/>
+                            <field name="x_order_id" required="1" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="x_archivo_name" invisible="1"/>
+                            <field name="x_archivo" filename="x_archivo_name" required="1" string="Archivo"/>
+                            <field name="create_date" string="Subido" invisible="not id" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="x_es_pdf" invisible="1"/>
+                    <field name="x_vista" widget="pdf_viewer" nolabel="1" invisible="not id or not x_es_pdf"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_plano_search" model="ir.ui.view">
+        <field name="name">x_recorrido_plano.search</field>
+        <field name="model">x_recorrido_plano</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="x_name"/>
+                <field name="x_order_id"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_planos_orden_lista" model="ir.actions.act_window">
+        <field name="name">Planos</field>
+        <field name="res_model">x_recorrido_plano</field>
+        <field name="view_mode">list,form</field>
+    </record>
     <record id="view_order_form_recorridos" model="ir.ui.view">
         <field name="name">sale.order.form.recorridos</field>
         <field name="model">sale.order</field>
@@ -281,6 +335,10 @@
                 <button name="%(action_recorridos)d" type="action" class="oe_stat_button" icon="fa-map-marker"
                         context="{'search_default_x_order_id': id, 'default_x_order_id': id}" invisible="not x_recorrido_count">
                     <field name="x_recorrido_count" widget="statinfo" string="Recorridos"/>
+                </button>
+                <button name="%(automa_recorridos.action_planos_orden_lista)d" type="action" class="oe_stat_button" icon="fa-map-o"
+                        context="{'search_default_x_order_id': id, 'default_x_order_id': id}">
+                    <field name="x_plano_count" widget="statinfo" string="Planos"/>
                 </button>
             </xpath>
         </field>
