@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 36;
+  const APP_VERSION = 37;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -247,7 +247,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
   const RESP = ["Automa", "Obra"];
   // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
-  const TECNICOS = ["Omar Santiago", "Denilson Santiago", "David Eléctrico", "Jorge Mayen", "Mauricio Cuervo"];
+  // La lista viene de Odoo (Recorridos > Empleados, los que están prendidos) junto con el catálogo de planos.
+  let TECNICOS = ["Omar Santiago", "Denilson Santiago", "David Eléctrico", "Jorge Mayen", "Mauricio Cuervo"];
+  try { const t = JSON.parse(localStorage.getItem("automa-tecnicos") || "null"); if (Array.isArray(t)) TECNICOS = t; } catch (e) {}
+  window.__automaTecnicos = l => { if (!Array.isArray(l)) return; TECNICOS = l.map(String); try { localStorage.setItem("automa-tecnicos", JSON.stringify(TECNICOS)); } catch (e) {} };
   // Opciones rápidas de cada color (se guardan en mot y resp, igual que el amarillo).
   const OPC = {
     rojo:     [{ k: "mot", lbl: "¿Qué falta?", opts: ["Falta tubería", "Falta caja", "Falta bajada", "Tubería tapada", "Falta llegar al registro/centro de carga", "Otro"] },
