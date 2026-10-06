@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 37;
+  const APP_VERSION = 38;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -285,11 +285,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  // Texto junto al círculo (en el plano y en el PDF): lo que se eligió en las opciones de ese color.
   function label(m) {
-    if (m.st === "rojo") return "Falta tubería";
-    if (m.st === "azul") return "Cableado OK";
-    if (m.st === "verde") return "Terminado";
-    return m.mot && m.mot !== "Otro" ? m.mot : (m.nota || "Detalle");
+    const mot = m.mot && m.mot !== "Otro" ? m.mot : "";
+    if (m.st === "verde") return m.resp || mot || "Terminado";
+    const base = mot || (m.st === "rojo" ? "Falta tubería" : m.st === "azul" ? "Cableado OK" : (m.nota || "Detalle"));
+    return m.resp ? `${base} · ${m.resp}` : base;
   }
 
   /* ---------- draft (IndexedDB) ---------- */
@@ -761,7 +762,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function closeSheet() { $("sheetHost").innerHTML = ""; }
   function sheet(html, bind) {
     $("sheetHost").innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
-    $("scrim").addEventListener("click", e => { if (e.target.id === "scrim" && !$("mObra") && !$("pvFix")) closeSheet(); });
+    // El "clic fantasma" del mismo toque que abrió la ventana no la cierra.
+    const t0 = Date.now();
+    $("scrim").addEventListener("click", e => { if (Date.now() - t0 > 500 && e.target.id === "scrim" && !$("mObra") && !$("pvFix")) closeSheet(); });
     bind();
   }
   function chips(name, opts, val) {
@@ -1027,22 +1030,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       sp.drawText(`${pct(k)}% de ${circ.length}`, { x: tx + 54, y: y - 39, size: 9, font: fontR, color: GRAY });
     });
     y -= 82;
-    const pend = circ.filter(m => m.st === "rojo" || m.st === "amarillo").sort((a, b) => (a.st === b.st ? a.n - b.n : a.st === "rojo" ? -1 : 1));
+    const RANK = { rojo: 0, amarillo: 1, azul: 2, verde: 3 };
+    const pend = circ.slice().sort((a, b) => (a.st === b.st ? a.n - b.n : RANK[a.st] - RANK[b.st]));
     const cols = [M + 8, M + 44, M + 164, M + 344, M + 430];
     const head = () => {
       sp.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: INK });
-      ["#", "Status", "Qué falta", "Responsable", "Nota"].forEach((h, i) => sp.drawText(h, { x: cols[i], y, size: 9, font, color: rgb(1, 1, 1) }));
+      ["#", "Status", "Detalle", "Qué sigue / Quién", "Nota"].forEach((h, i) => sp.drawText(h, { x: cols[i], y, size: 9, font, color: rgb(1, 1, 1) }));
       y -= 22;
     };
-    if (!pend.length) sp.drawText("Sin pendientes: todas las salidas revisadas están listas.", { x: M, y, size: 11, font: fontR, color: INK });
+    if (!pend.length) sp.drawText("No se marcaron salidas en este recorrido.", { x: M, y, size: 11, font: fontR, color: INK });
     else {
-      sp.drawText("Pendientes", { x: M, y, size: 13, font, color: INK }); y -= 22; head();
+      sp.drawText("Relación de salidas", { x: M, y, size: 13, font, color: INK }); y -= 22; head();
       pend.forEach((m, r) => {
         if (y < 70) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); head(); }
         const c = ST[m.st];
         if (r % 2) sp.drawRectangle({ x: M, y: y - 5, width: W - 2 * M, height: 17, color: TINT });
         sp.drawCircle({ x: cols[1] + 4, y: y + 3, size: 3.5, borderColor: rgb(...c.rgb), borderWidth: 1.5 });
-        const row = [String(m.n), c.name, m.mot || (m.st === "rojo" ? "Tubería" : "-"), m.resp || (m.st === "rojo" ? "Obra" : "-"), (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
+        const row = [String(m.n), c.name, m.mot || (m.st === "rojo" ? "Tubería" : "-"), m.resp || "-", (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
         row.forEach((v, i) => {
           const maxW = (i === 4 ? W - M : cols[i + 1]) - cols[i] - 8 - (i === 1 ? 12 : 0);
           sp.drawText(fit(v, 9, i === 1 ? font : fontR, maxW), { x: cols[i] + (i === 1 ? 12 : 0), y, size: 9, font: i === 1 ? font : fontR, color: i === 1 ? rgb(...c.text) : INK });
@@ -1098,7 +1102,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           fp.drawImage(img, { x: x0, y: fy - cell, width: cell, height: cell });
           fp.drawRectangle({ x: x0, y: fy - cell, width: cell, height: 3, color: rgb(...c.rgb) });
           fp.drawText(`${m.n}`, { x: x0, y: fy - cell - 11, size: 8, font, color: rgb(...c.text) });
-          const desc = (m.mot || (m.st === "amarillo" ? "Detalle" : c.name)) + (m.resp && (m.st === "azul" || m.st === "verde") ? " · " + m.resp : "") + (m.nota ? " - " + m.nota : "");
+          const lb = label(m), desc = lb + (m.nota && lb.indexOf(m.nota) < 0 ? " - " + m.nota : "");
           const nW = font.widthOfTextAtSize(`${m.n}`, 8) + 4;
           wrap2(desc, 6.5, cell - nW).forEach((l, k) => fp.drawText(l, { x: x0 + nW, y: fy - cell - 11 - k * 8, size: 6.5, font: fontR, color: GRAY }));
         }
@@ -1197,7 +1201,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     sheet(`<h2>Revisa el PDF</h2>
       <p class="note">Así queda el recorrido que se sube a Odoo. Si algo no está bien, pica <b>Corregir</b>, cámbialo y vuelve a picar Guardar.</p>
       ${botones(1)}
-      <div id="rvPages" style="display:flex;flex-direction:column;gap:10px"><p class="note">Generando vista previa…</p></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0">
+        <button type="button" class="btn" id="rvMenos" style="flex:0 0 auto;min-width:52px">−</button>
+        <span id="rvZ" class="note" style="min-width:90px;text-align:center">Pellizca o usa + / −</span>
+        <button type="button" class="btn" id="rvMas" style="flex:0 0 auto;min-width:52px">+</button>
+      </div>
+      <div id="rvWrap" style="height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;border-radius:8px;background:#e9edf1;padding:6px">
+        <div id="rvPages" style="width:100%;display:flex;flex-direction:column;gap:10px"><p class="note">Generando vista previa…</p></div>
+      </div>
       ${botones(2)}`, () => {
       const sh = $("sheetHost").querySelector(".sheet"); if (sh) sh.style.maxWidth = "900px";
       const guardar = async () => {
@@ -1208,11 +1219,45 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         finally { btn.disabled = false; btn.textContent = "Guardar"; }
       };
       [1, 2].forEach(n => { $("rvNo" + n).onclick = closeSheet; $("rvOk" + n).onclick = guardar; });
+      // Zoom de la vista previa: pellizco con dos dedos, botones + / − y doble toque.
+      const wrap = $("rvWrap"), pages = $("rvPages");
+      let z = 1, pin = null, lastTap = 0;
+      const setZ = (nz, cx, cy) => {
+        nz = Math.min(5, Math.max(1, nz));
+        const r = wrap.getBoundingClientRect();
+        if (cx == null) { cx = r.width / 2; cy = r.height / 2; }
+        const fx = (wrap.scrollLeft + cx) / pages.offsetWidth, fy = (wrap.scrollTop + cy) / pages.offsetHeight;
+        z = nz; pages.style.width = (z * 100) + "%";
+        wrap.scrollLeft = fx * pages.offsetWidth - cx; wrap.scrollTop = fy * pages.offsetHeight - cy;
+        $("rvZ").textContent = Math.round(z * 100) + "%";
+      };
+      const mid = (t, r) => [(t[0].clientX + t[1].clientX) / 2 - r.left, (t[0].clientY + t[1].clientY) / 2 - r.top];
+      wrap.addEventListener("touchstart", e => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          pin = { d0: Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), z0: z };
+        } else if (e.touches.length === 1) {
+          const now = Date.now();
+          if (now - lastTap < 300) { e.preventDefault(); const r = wrap.getBoundingClientRect(); setZ(z > 1.4 ? 1 : 2.5, e.touches[0].clientX - r.left, e.touches[0].clientY - r.top); lastTap = 0; }
+          else lastTap = now;
+        }
+      }, { passive: false });
+      wrap.addEventListener("touchmove", e => {
+        if (!pin || e.touches.length !== 2) return;
+        e.preventDefault();
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const [cx, cy] = mid(e.touches, wrap.getBoundingClientRect());
+        setZ(pin.z0 * d / pin.d0, cx, cy);
+      }, { passive: false });
+      wrap.addEventListener("touchend", e => { if (e.touches.length < 2) pin = null; });
+      $("rvMas").onclick = () => setZ(z * 1.5);
+      $("rvMenos").onclick = () => setZ(z / 1.5);
       (async () => {
         const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
         const box = $("rvPages"); if (!box) return;
         box.innerHTML = "";
-        const w = Math.min(860, box.clientWidth || 600), k = Math.min(2, window.devicePixelRatio || 1);
+        // Se dibuja con más resolución para que se lea bien al hacer zoom.
+        const w = Math.min(860, box.clientWidth || 600), k = doc.numPages > 6 ? 2 : Math.min(3, (window.devicePixelRatio || 1) * 1.5);
         for (let i = 1; i <= doc.numPages; i++) {
           if (!$("rvPages")) return;
           const pg = await doc.getPage(i), v1 = pg.getViewport({ scale: 1 });
