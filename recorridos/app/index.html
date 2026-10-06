@@ -166,16 +166,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <img class="brand" src="logo.png" alt="Automa" width="1340" height="265">
         <h1>Marca el avance sobre el plano</h1>
         <ol class="steps">
-          <li style="display:contents"><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong> (o un PDF con <strong>Abrir plano</strong>).</span></li>
+          <li style="display:contents"><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
           <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
         </ol>
-        <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>. Si te mandaron el PDF de un recorrido, usa <b>Cargar recorrido anterior</b>.</p>
+        <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>.</p>
         <div class="actions">
           <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
           <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
-          <button class="btn primary" id="openBtn" type="button">Abrir plano (PDF)</button>
-          <button class="btn" id="prevBtn" type="button">Cargar recorrido anterior</button>
+          <button class="btn primary" id="openBtn" type="button" hidden>Abrir plano (PDF)</button>
+          <button class="btn" id="prevBtn" type="button" hidden>Cargar recorrido anterior</button>
           <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 29;
+  const APP_VERSION = 31;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -291,9 +291,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     async outAll() { try { const db = await this.open(); return await new Promise(res => { const out = []; const q = db.transaction("out").objectStore("out").openCursor(); q.onsuccess = () => { const c = q.result; if (c) { out.push([c.key, c.value]); c.continue(); } else res(out); }; q.onerror = () => res(out); }); } catch (e) { return []; } },
     async put(v) { try { const db = await this.open(); db.transaction("d", "readwrite").objectStore("d").put(v, "draft"); } catch (e) {} },
     async get() { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("d").objectStore("d").get("draft"); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } },
+    async del() { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").delete("draft"); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
   };
   let draftT = 0;
+  // dirty: hay cambios que no se han guardado en Odoo. Solo entonces queda "Continuar" en el inicio.
+  let dirty = false;
   function saveDraft() {
+    dirty = true;
     clearTimeout(draftT);
     draftT = setTimeout(() => DB.put({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }), 400);
   }
@@ -350,7 +354,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     $("counts").hidden = false; $("saveBtn").hidden = false; $("backBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
     await showPage(S.page, true);
     $("busy").hidden = true;
-    refreshHeader(); saveDraft();
+    refreshHeader(); dirty = false;
     if (prev) openPrevSheet(prev);
     else if (askMeta) openMetaSheet(true);
   }
@@ -1124,7 +1128,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (!S.meta.tecnico || !S.meta.obra) { openMetaSheet(); toast("Completa obra y técnico antes de guardar"); return; }
     if (!getOdoo()) { openMetaSheet(); toast("Primero conecta la app con Odoo: pega el enlace que te mandó Mauricio"); return; }
     const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Guardando…";
-    try { await queueOdoo(await makeFile()); }
+    try { await queueOdoo(await makeFile()); clearTimeout(draftT); dirty = false; await DB.del(); }
     catch (e) { toast("No se pudo generar el PDF. Intenta de nuevo."); }
     finally { btn.disabled = false; btn.textContent = "Guardar"; }
   };
@@ -1183,28 +1187,48 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     lista = (lista || []).filter(it => it.planos && it.planos.length);
     const guardados = {};
     for (const it of lista) { let n = 0; for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); if (c && c.v === pl.v) n++; } guardados[it.order_id] = n; }
-    sheet(`<h2>Planos de obras</h2>
+    // Primero los clientes; dentro, sus órdenes con la referencia interna (concepto); al picar la orden se abre el plano.
+    const cliOf = it => it.cliente_nombre || it.obra || it.cliente || "Sin cliente";
+    const grupos = [];
+    for (const it of lista) { const k = cliOf(it); let g = grupos.find(x => x.k === k); if (!g) grupos.push(g = { k, items: [] }); g.items.push(it); }
+    grupos.sort((a, b) => a.k.localeCompare(b.k, "es"));
+    const qOf = it => sinAcentos([cliOf(it), it.obra, it.orden, it.concepto || "", it.cliente].join(" "));
+    const nPl = items => items.reduce((n, it) => n + it.planos.length, 0);
+    const nGu = items => items.reduce((n, it) => n + (guardados[it.order_id] || 0), 0);
+    const verCliente = g => {
+      if (g.items.length === 1) return elegirPlano(g.items[0], base, () => verClientes());
+      sheet(`<button type="button" class="linkbtn" id="plVolver">‹ Clientes</button><h2>${esc(g.k)}</h2><p class="note">¿Qué orden vas a recorrer?</p>
+        <div class="hlist">${g.items.map(it => `<div class="hrow">
+          <div class="hinfo"><b>${esc(it.orden)}${it.concepto ? " · " + esc(it.concepto) : ""}</b><span>${it.planos.length} plano${it.planos.length > 1 ? "s" : ""}</span>${guardados[it.order_id] ? `<span class="c-verde">✓ ${guardados[it.order_id]} guardado${guardados[it.order_id] > 1 ? "s" : ""} en este iPad</span>` : ""}</div>
+          <button type="button" class="btn primary" data-plano="${it.order_id}">Abrir</button></div>`).join("")}</div>`, () => {
+        $("plVolver").onclick = verClientes;
+        $("sheetHost").querySelectorAll("[data-plano]").forEach(b => b.onclick = () => elegirPlano(g.items.find(x => String(x.order_id) === b.dataset.plano), base, () => verCliente(g)));
+      });
+    };
+    const verClientes = () => sheet(`<h2>Planos de obras</h2>
       <p class="note">${offline ? "Sin señal: se muestra la última lista. Solo abren los planos marcados como guardados." : "Obras vivas en Odoo. El plano se guarda en este iPad para usarlo sin señal."}</p>
-      ${lista.length > 3 ? `<div class="field"><input id="plBuscar" type="search" placeholder="Buscar obra, cliente o cotización" autocomplete="off"></div>` : ""}
-      <div class="hlist">${lista.map(it => `<div class="hrow" data-q="${esc(sinAcentos([it.obra, it.orden, it.cliente].join(" ")))}">
-          <div class="hinfo"><b>${esc(it.obra)}</b><span>${esc(it.orden)} · ${esc(it.cliente)} · ${it.planos.length} plano${it.planos.length > 1 ? "s" : ""}</span>${guardados[it.order_id] ? `<span class="c-verde">✓ ${guardados[it.order_id]} guardado${guardados[it.order_id] > 1 ? "s" : ""} en este iPad</span>` : ""}</div>
-          <button type="button" class="btn primary" data-plano="${it.order_id}">Abrir</button></div>`).join("") || '<p class="note">No hay obras vivas con plano. En Odoo sube el plano en la orden de venta.</p>'}</div>`, () => {
-      $("sheetHost").querySelectorAll("[data-plano]").forEach(b => b.onclick = () => elegirPlano(lista.find(x => String(x.order_id) === b.dataset.plano), base));
+      ${grupos.length > 3 ? `<div class="field"><input id="plBuscar" type="search" placeholder="Buscar cliente, orden o referencia" autocomplete="off"></div>` : ""}
+      <div class="hlist">${grupos.map((g, i) => `<div class="hrow" data-q="${esc(g.items.map(qOf).join(" "))}">
+          <div class="hinfo"><b>${esc(g.k)}</b><span>${g.items.length > 1 ? g.items.length + " órdenes · " : esc(g.items[0].orden) + (g.items[0].concepto ? " · " + esc(g.items[0].concepto) : "") + " · "}${nPl(g.items)} plano${nPl(g.items) > 1 ? "s" : ""}</span>${nGu(g.items) ? `<span class="c-verde">✓ ${nGu(g.items)} guardado${nGu(g.items) > 1 ? "s" : ""} en este iPad</span>` : ""}</div>
+          <button type="button" class="btn primary" data-cli="${i}">Abrir</button></div>`).join("") || '<p class="note">No hay obras vivas con plano. En Odoo sube el plano en la orden de venta.</p>'}</div>`, () => {
+      $("sheetHost").querySelectorAll("[data-cli]").forEach(b => b.onclick = () => verCliente(grupos[+b.dataset.cli]));
       const bus = $("plBuscar");
       if (bus) bus.oninput = () => {
         const t = sinAcentos(bus.value).trim().split(/\s+/).filter(Boolean);
         $("sheetHost").querySelectorAll(".hrow[data-q]").forEach(r => { r.hidden = !t.every(w => r.dataset.q.includes(w)); });
       };
     });
+    verClientes();
   }
-  async function elegirPlano(it, base) {
+  async function elegirPlano(it, base, volver) {
     if (it.planos.length === 1) return abrirPlano(it, it.planos[0], base);
     const ok = {};
     for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); ok[pl.id] = !!(c && c.v === pl.v); }
-    sheet(`<h2>${esc(it.obra)}</h2><p class="note">¿Qué plano vas a recorrer?</p>
+    sheet(`${volver ? '<button type="button" class="linkbtn" id="plVolver">‹ Volver</button>' : ""}<h2>${esc(it.obra)}</h2><p class="note">${esc(it.orden)}${it.concepto ? " · " + esc(it.concepto) : ""} · ¿Qué plano vas a recorrer?</p>
       <div class="hlist">${it.planos.map(pl => `<div class="hrow">
         <div class="hinfo"><b>${esc(pl.tipo)}</b><span>${esc(pl.nombre)}</span>${ok[pl.id] ? '<span class="c-verde">✓ Guardado en este iPad</span>' : ""}</div>
         <button type="button" class="btn primary" data-pl="${pl.id}">Abrir</button></div>`).join("")}</div>`, () => {
+      if (volver) $("plVolver").onclick = volver;
       $("sheetHost").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => abrirPlano(it, it.planos.find(x => String(x.id) === b.dataset.pl), base));
     });
   }
@@ -1275,11 +1299,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   /* ---------- salir al inicio ---------- */
   $("backBtn").onclick = () => sheet(`
       <h2>¿Salir al inicio?</h2>
-      <p class="note">Tu recorrido queda guardado en este celular. Lo retomas con <b>Continuar</b> en la pantalla de inicio.</p>
+      <p class="note">${dirty ? "Tienes cambios sin guardar en Odoo: se quedan en este equipo y los retomas con <b>Continuar</b> en la pantalla de inicio." : "Ya guardaste este recorrido."}</p>
       <div class="row"><button type="button" class="btn" id="exNo">Seguir aquí</button><button type="button" class="btn primary" id="exYes">Salir</button></div>`, () => {
     $("exNo").onclick = closeSheet;
     $("exYes").onclick = async () => {
       clearTimeout(draftT);
+      if (!dirty) { await DB.del(); location.reload(); return; }
       try {
         const db = await DB.open();
         await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").put({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }, "draft"); t.oncomplete = res; t.onerror = res; });
@@ -1409,10 +1434,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   };
   try { S.meta.tecnico = localStorage.getItem("automa-tecnico") || ""; } catch (e) {}
   DB.get().then(d => {
-    if (d && d.bytes && d.marks) {
+    if (d && d.bytes && d.marks && d.marks.length) {
       const b = $("resumeBtn"); b.hidden = false;
       b.textContent = `Continuar: ${d.meta?.obra || "recorrido guardado"} (${d.marks.length} círculos)`;
-      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), migrate(d.marks, d.v), d.meta, d.page, false); };
+      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), migrate(d.marks, d.v), d.meta, d.page, false).then(() => { dirty = true; }); };
     }
   });
 })();
