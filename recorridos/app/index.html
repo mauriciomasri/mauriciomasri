@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 31;
+  const APP_VERSION = 32;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -536,14 +536,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       snapshot(); hit.st = S.tool;
       if (S.tool !== "amarillo") { hit.mot = ""; hit.resp = ""; }
       changed();
-      if (S.tool === "amarillo") openMarkSheet(hit, true); else offerPhoto(hit);
+      openMarkSheet(hit, true);
       return;
     }
     const [x, y] = viewport.convertToPdfPoint(px, py);
     snapshot();
     const m = { id: Math.random().toString(36).slice(2, 9), n: S.nextN++, page: S.page, x, y, st: S.tool, mot: "", resp: "", nota: "" };
     S.marks.push(m); changed();
-    if (S.tool === "amarillo") openMarkSheet(m, true); else offerPhoto(m);
+    openMarkSheet(m, true);
   }
 
   /* ---------- pointer: tap, pinch ---------- */
