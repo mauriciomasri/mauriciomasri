@@ -176,7 +176,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
           <button class="btn primary" id="openBtn" type="button" hidden>Abrir plano (PDF)</button>
           <button class="btn" id="prevBtn" type="button" hidden>Cargar recorrido anterior</button>
-          <button class="btn" id="resumeBtn" type="button" hidden>Continuar recorrido guardado</button>
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
         </div>
@@ -234,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 38;
+  const APP_VERSION = 39;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -304,17 +303,30 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     async histDel(k) { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("hist", "readwrite"); t.objectStore("hist").delete(k); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
     async histAll() { try { const db = await this.open(); return await new Promise(res => { const out = []; const q = db.transaction("hist").objectStore("hist").openCursor(); q.onsuccess = () => { const c = q.result; if (c) { out.push(c.value); c.continue(); } else res(out); }; q.onerror = () => res(out); }); } catch (e) { return []; } },
     async outAll() { try { const db = await this.open(); return await new Promise(res => { const out = []; const q = db.transaction("out").objectStore("out").openCursor(); q.onsuccess = () => { const c = q.result; if (c) { out.push([c.key, c.value]); c.continue(); } else res(out); }; q.onerror = () => res(out); }); } catch (e) { return []; } },
-    async put(v) { try { const db = await this.open(); db.transaction("d", "readwrite").objectStore("d").put(v, "draft"); } catch (e) {} },
-    async get() { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("d").objectStore("d").get("draft"); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } },
-    async del() { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").delete("draft"); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
+    // Un borrador por plano (lo que se lleva sin guardar en Odoo); "draft" es el formato viejo de un solo borrador.
+    async put(v, k = "draft") { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").put(v, k); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
+    async get(k = "draft") { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("d").objectStore("d").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch (e) { return null; } },
+    async del(k = "draft") { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").delete(k); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
   };
   let draftT = 0;
-  // dirty: hay cambios que no se han guardado en Odoo. Solo entonces queda "Continuar" en el inicio.
+  const dk = m => "draft-" + ((m && m.plano_id) || "demo");
+  const draftData = () => ({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page });
+  // Si quedó algo sin guardar de este plano, se abre tal cual (sin preguntar) y sigue marcado como pendiente de guardar.
+  async function recuperar(k) {
+    const d = await DB.get(k);
+    if (!d || !d.bytes || !d.marks || !d.marks.length) return false;
+    closeSheet(); $("busy").hidden = false;
+    await startSession(new Uint8Array(d.bytes), migrate(d.marks, d.v), { ...d.meta, tecnico: S.meta.tecnico || d.meta?.tecnico || "" }, d.page, false);
+    dirty = true;
+    toast("Se recuperó lo que llevabas sin guardar");
+    return true;
+  }
+  // dirty: hay cambios que no se han guardado en Odoo. Solo entonces se guarda el borrador de este plano.
   let dirty = false;
   function saveDraft() {
     dirty = true;
     clearTimeout(draftT);
-    draftT = setTimeout(() => DB.put({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }), 400);
+    draftT = setTimeout(() => DB.put(draftData(), dk(S.meta)), 400);
   }
 
   /* ---------- loading ---------- */
@@ -1214,7 +1226,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const guardar = async () => {
         closeSheet();
         const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Guardando…";
-        try { await queueOdoo(file); clearTimeout(draftT); dirty = false; await DB.del(); }
+        try { await queueOdoo(file); clearTimeout(draftT); dirty = false; await DB.del(dk(S.meta)); }
         catch (e) { toast("No se pudo guardar. Intenta de nuevo."); }
         finally { btn.disabled = false; btn.textContent = "Guardar"; }
       };
@@ -1390,6 +1402,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     // ¿Hay un recorrido anterior de este plano? Se ofrece el más reciente: el de este iPad o el último guardado en Odoo (de cualquier técnico).
     const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
     const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
+    if (await recuperar(dk(meta))) return;
     let prev = null;
     const local = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt)[0];
     if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este iPad" };
@@ -1438,16 +1451,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   /* ---------- salir al inicio ---------- */
   $("backBtn").onclick = () => sheet(`
       <h2>¿Salir al inicio?</h2>
-      <p class="note">${dirty ? "Tienes cambios sin guardar en Odoo: se quedan en este equipo y los retomas con <b>Continuar</b> en la pantalla de inicio." : "Ya guardaste este recorrido."}</p>
+      <p class="note">${dirty ? "Tienes cambios sin guardar en Odoo: se quedan en este equipo y aparecen solos la próxima vez que abras este plano." : "Ya guardaste este recorrido."}</p>
       <div class="row"><button type="button" class="btn" id="exNo">Seguir aquí</button><button type="button" class="btn primary" id="exYes">Salir</button></div>`, () => {
     $("exNo").onclick = closeSheet;
     $("exYes").onclick = async () => {
       clearTimeout(draftT);
-      if (!dirty) { await DB.del(); location.reload(); return; }
-      try {
-        const db = await DB.open();
-        await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").put({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page }, "draft"); t.oncomplete = res; t.onerror = res; });
-      } catch (e) {}
+      if (!dirty) { await DB.del(dk(S.meta)); location.reload(); return; }
+      await DB.put(draftData(), dk(S.meta));
       location.reload();
     };
   });
@@ -1567,17 +1577,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     loadPdf(new Uint8Array(await f.arrayBuffer()), f.name, wantPrev);
   };
   $("demoBtn").onclick = async () => {
+    if (await recuperar(dk({}))) return;
     $("busy").hidden = false;
     const b = await demoBytes();
     startSession(new Uint8Array(b), [], { obra: "Obra de ejemplo", tecnico: S.meta.tecnico || "", fecha: today() }, 1, false);
   };
   try { S.meta.tecnico = localStorage.getItem("automa-tecnico") || ""; } catch (e) {}
-  DB.get().then(d => {
-    if (d && d.bytes && d.marks && d.marks.length) {
-      const b = $("resumeBtn"); b.hidden = false;
-      b.textContent = `Continuar: ${d.meta?.obra || "recorrido guardado"} (${d.marks.length} círculos)`;
-      b.onclick = () => { $("busy").hidden = false; startSession(new Uint8Array(d.bytes), migrate(d.marks, d.v), d.meta, d.page, false).then(() => { dirty = true; }); };
-    }
+  // Ya no hay botón "Continuar": el borrador viejo (uno solo) pasa a ser el borrador de su plano.
+  DB.get().then(async d => {
+    if (d && d.bytes && d.marks && d.marks.length && !(await DB.get(dk(d.meta)))) await DB.put(d, dk(d.meta));
+    if (d) await DB.del();
   });
 })();
 </script>
