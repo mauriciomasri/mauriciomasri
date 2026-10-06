@@ -234,7 +234,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 33;
+  const APP_VERSION = 34;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -246,6 +246,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   };
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
   const RESP = ["Automa", "Obra"];
+  // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
+  const TECNICOS = ["Omar Santiago", "Denilson Santiago", "David Eléctrico", "Jorge Mayen", "Mauricio Cuervo"];
   // Opciones rápidas de cada color (se guardan en mot y resp, igual que el amarillo).
   const OPC = {
     rojo:     [{ k: "mot", lbl: "¿Qué falta?", opts: ["Falta tubería", "Falta caja", "Falta bajada", "Tubería tapada", "Falta llegar al registro/centro de carga", "Otro"] },
@@ -849,7 +851,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     sheet(`
       <h2>${start ? "Nuevo recorrido" : "Datos del recorrido"}</h2>
       <div class="field"><label class="lbl" for="mObra">Nombre de la obra</label><input id="mObra" value="${esc(S.meta.obra)}" placeholder="Ej. Altezza GH" autocomplete="off"></div>
-      <div class="field"><label class="lbl" for="mTec">Técnico</label><input id="mTec" value="${esc(S.meta.tecnico)}" placeholder="Tu nombre" autocomplete="name"></div>
+      <div class="field"><label class="lbl" for="mTec">Técnicos</label><input id="mTec" value="${esc(S.meta.tecnico)}" placeholder="Elige abajo o escribe el nombre" autocomplete="off">
+        <div class="chips" id="tecChips" style="margin-top:8px">${TECNICOS.map(n => `<button type="button" class="chip" data-t="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join("")}</div></div>
       <div class="field"><label class="lbl" for="mFecha">Fecha del recorrido</label><input id="mFecha" type="date" value="${S.meta.fecha}"></div>
       ${start ? "" : `<div class="field"><label class="lbl" for="mOdoo">Conexión con Odoo</label>
         ${getOdoo() ? `<div class="row"><span class="note" style="flex:1;align-self:center">Conectada ✓ · lo que guardes en Odoo se sube solo</span><button type="button" class="btn" id="mOdooOff">Quitar</button></div>`
@@ -857,10 +860,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <div class="row">${S.bytes ? `<button type="button" class="btn" id="mNew">Abrir otro plano</button>` : ""}<button type="button" class="btn primary" id="mOk">${start ? "Empezar" : "Guardar"}</button></div>
       <p class="note">Versión ${APP_VERSION}</p>`, () => {
       if (start && !S.meta.obra) setTimeout(() => $("mObra").focus(), 60);
+      const tecList = () => $("mTec").value.split(",").map(x => x.trim()).filter(Boolean);
+      const pintaTec = () => { const l = tecList().map(x => x.toLowerCase()); $("tecChips").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", l.includes(c.dataset.t.toLowerCase()) ? "true" : "false")); };
+      $("tecChips").querySelectorAll(".chip").forEach(c => c.onclick = () => {
+        const l = tecList(), i = l.findIndex(x => x.toLowerCase() === c.dataset.t.toLowerCase());
+        if (i >= 0) l.splice(i, 1); else l.push(c.dataset.t);
+        $("mTec").value = l.join(", "); pintaTec();
+      });
+      $("mTec").oninput = pintaTec; pintaTec();
       $("mOk").onclick = () => {
         const obra = $("mObra").value.trim(), tec = $("mTec").value.trim();
         if (!obra) { toast("Escribe el nombre de la obra"); $("mObra").focus(); return; }
-        if (!tec) { toast("Escribe tu nombre"); $("mTec").focus(); return; }
+        if (!tec) { toast("Elige o escribe el técnico"); $("mTec").focus(); return; }
         S.meta.obra = obra;
         S.meta.tecnico = tec;
         S.meta.fecha = $("mFecha").value || today();
