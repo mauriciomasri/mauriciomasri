@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 39;
+  const APP_VERSION = 40;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -276,7 +276,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   let pageObj = null, viewport = null, renderTask = null;
 
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  function today() { const d = new Date(); return d.toISOString().slice(0, 10); }
+  // Fecha del teléfono (hora local). Antes salía en UTC y después de las 6 pm en México marcaba el día siguiente.
+  function today() { const d = new Date(), z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; }
   function fmtFecha(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
   function toast(msg) {
     document.querySelectorAll(".toast").forEach(x => x.remove());
