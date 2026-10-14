@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 42;
+  const APP_VERSION = 43;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1134,22 +1134,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
     // Links dentro del PDF: círculo del plano → su foto (con su descripción) o su renglón en la relación;
     // número en la relación → el círculo en el plano (y la nota → la foto); foto → el círculo en el plano.
+    // Al picar un link el visor hace zoom justo a esa salida (destino /FitR), así queda "resaltada" la que tocaste.
     const { PDFName } = PDFLib;
-    const link = (page, rect, dest, top) => {
-      const a = pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: rect, Border: [0, 0, 0], Dest: [dest.ref, PDFName.of("XYZ"), null, top, null] });
+    const link = (page, rect, dest, box) => {
+      const a = pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: rect, Border: [0, 0, 0], H: PDFName.of("O"), Dest: [dest.ref, PDFName.of("FitR"), ...box] });
       page.node.addAnnot(pdf.context.register(a));
     };
+    const clampBox = (pg, [l, b, r, t]) => [Math.max(0, l), Math.max(0, b), Math.min(pg.getWidth(), r), Math.min(pg.getHeight(), t)];
     for (const m of circ) {
       const q = pos.get(m); if (!q || !q.plan) continue;
-      const { page, x, y: py, r } = q.plan, k = r * 1.5;
-      const planTop = Math.min(page.getHeight(), py + page.getHeight() * 0.25);
-      if (q.foto) link(page, [x - k, py - k, x + k, py + k], q.foto.page, q.foto.top);
-      else if (q.row) link(page, [x - k, py - k, x + k, py + k], q.row.page, q.row.y + 40);
+      const { page, x, y: py, r } = q.plan, k = r * 1.5, z = r * 9;
+      const planBox = clampBox(page, [x - z * 1.6, py - z, x + z * 1.6, py + z]);
+      const fotoBox = q.foto && clampBox(q.foto.page, [q.foto.x - 30, q.foto.y - 36, q.foto.x + q.foto.w + 30, q.foto.y + q.foto.w + 20]);
+      const rowBox = q.row && clampBox(q.row.page, [M - 6, q.row.y - 40, W - M + 6, q.row.y + 50]);
+      if (q.foto) link(page, [x - k, py - k, x + k, py + k], q.foto.page, fotoBox);
+      else if (q.row) link(page, [x - k, py - k, x + k, py + k], q.row.page, rowBox);
       if (q.row) {
-        link(q.row.page, [M, q.row.y - 5, cols[2] - 4, q.row.y + 12], page, planTop);
-        if (q.foto) link(q.row.page, [cols[4] - 4, q.row.y - 5, W - M, q.row.y + 12], q.foto.page, q.foto.top);
+        link(q.row.page, [M, q.row.y - 5, cols[2] - 4, q.row.y + 12], page, planBox);
+        if (q.foto) link(q.row.page, [cols[4] - 4, q.row.y - 5, W - M, q.row.y + 12], q.foto.page, fotoBox);
       }
-      if (q.foto) link(q.foto.page, [q.foto.x, q.foto.y, q.foto.x + q.foto.w, q.foto.y + q.foto.w], page, planTop);
+      if (q.foto) link(q.foto.page, [q.foto.x, q.foto.y, q.foto.x + q.foto.w, q.foto.y + q.foto.w], page, planBox);
     }
 
     // Pie de página en las hojas de Automa
