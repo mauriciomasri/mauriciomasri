@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 44;
+  const APP_VERSION = 45;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1161,7 +1161,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const p of ours) {
       if (p !== cv) p.drawRectangle({ x: M, y: 36, width: W - 2 * M, height: 0.6, color: LINE });
       p.drawText("soporte@automaproyecto.com", { x: M, y: 22, size: 8.5, font, color: BLUE });
-      center(p, "Automa  ·  Recorrido de obra", 8, fontR, 22, GRAY);
+      center(p, fit(`Recorrido de obra  ·  ${S.meta.obra || "Obra"}  ·  ${fmtFecha(S.meta.fecha)}`, 8, fontR, W - 2 * M - 260), 8, fontR, 22, GRAY);
       right(p, `Página ${all.indexOf(p) + 1} de ${N}`, 8, fontR, 22, GRAY);
     }
     await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
