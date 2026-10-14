@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 43;
+  const APP_VERSION = 44;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -243,7 +243,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     azul:     { name: "Tubería y cableado OK", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
     verde:    { name: "Terminado con equipo",  tool: "Terminado", rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
   };
-  const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Otro"];
+  const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Otro"];
   const RESP = ["Automa", "Obra"];
   // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
   // La lista viene de Odoo (Recorridos > Empleados, los que están prendidos) junto con el catálogo de planos.
