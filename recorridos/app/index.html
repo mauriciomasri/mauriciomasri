@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 40;
+  const APP_VERSION = 42;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -951,6 +951,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const font = await pdf.embedFont(StandardFonts.HelveticaBold);
     const fontR = await pdf.embedFont(StandardFonts.Helvetica);
     const safe = s => String(s).replace(/[^\x20-\x7E -ÿ]/g, "");
+    // Dónde quedó cada salida (plano, renglón de la relación, primera foto) para ligarlas con links dentro del PDF.
+    const pos = new Map();
+    const at = m => { if (!pos.has(m)) pos.set(m, {}); return pos.get(m); };
     for (let p = 1; p <= S.pages; p++) {
       const ms = S.marks.filter(m => m.page === p); if (!ms.length) continue;
       const pg = pdf.getPage(p - 1);
@@ -976,6 +979,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         }
         const c = ST[m.st];
         pg.drawCircle({ x: m.x, y: m.y, size: rpt, borderColor: rgb(...c.rgb), borderWidth: rpt * 0.22 });
+        at(m).plan = { page: pg, x: m.x, y: m.y, r: rpt };
         const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
         const [tx, ty] = v1.convertToPdfPoint(vx + rpt * 1.3, vy + rpt * 0.25);
         pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
@@ -1053,12 +1057,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     };
     if (!pend.length) sp.drawText("No se marcaron salidas en este recorrido.", { x: M, y, size: 11, font: fontR, color: INK });
     else {
-      sp.drawText("Relación de salidas", { x: M, y, size: 13, font, color: INK }); y -= 22; head();
+      sp.drawText("Relación de salidas", { x: M, y, size: 13, font, color: INK });
+      right(sp, "Toca una salida en el plano para ver su detalle y su foto. Toca el número aquí para ir al plano.", 8, fontR, y + 1, GRAY);
+      y -= 22; head();
       pend.forEach((m, r) => {
         if (y < 70) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); head(); }
         const c = ST[m.st];
         if (r % 2) sp.drawRectangle({ x: M, y: y - 5, width: W - 2 * M, height: 17, color: TINT });
         sp.drawCircle({ x: cols[1] + 4, y: y + 3, size: 3.5, borderColor: rgb(...c.rgb), borderWidth: 1.5 });
+        at(m).row = { page: sp, y };
         const row = [String(m.n), c.name, m.mot || (m.st === "rojo" ? "Tubería" : "-"), m.resp || "-", (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
         row.forEach((v, i) => {
           const maxW = (i === 4 ? W - M : cols[i + 1]) - cols[i] - 8 - (i === 1 ? 12 : 0);
@@ -1113,6 +1120,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           const img = await pdf.embedJpg(await squareJpeg(f));
           const x0 = M + ci * (cell + GAP);
           fp.drawImage(img, { x: x0, y: fy - cell, width: cell, height: cell });
+          if (!at(m).foto) at(m).foto = { page: fp, x: x0, y: fy - cell, w: cell, top: fy + GH + 4 };
           fp.drawRectangle({ x: x0, y: fy - cell, width: cell, height: 3, color: rgb(...c.rgb) });
           fp.drawText(`${m.n}`, { x: x0, y: fy - cell - 11, size: 8, font, color: rgb(...c.text) });
           const lb = label(m), desc = lb + (m.nota && lb.indexOf(m.nota) < 0 ? " - " + m.nota : "");
@@ -1122,6 +1130,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         fy -= cell + CAP + GAP;
       }
       fy -= 6;
+    }
+
+    // Links dentro del PDF: círculo del plano → su foto (con su descripción) o su renglón en la relación;
+    // número en la relación → el círculo en el plano (y la nota → la foto); foto → el círculo en el plano.
+    const { PDFName } = PDFLib;
+    const link = (page, rect, dest, top) => {
+      const a = pdf.context.obj({ Type: "Annot", Subtype: "Link", Rect: rect, Border: [0, 0, 0], Dest: [dest.ref, PDFName.of("XYZ"), null, top, null] });
+      page.node.addAnnot(pdf.context.register(a));
+    };
+    for (const m of circ) {
+      const q = pos.get(m); if (!q || !q.plan) continue;
+      const { page, x, y: py, r } = q.plan, k = r * 1.5;
+      const planTop = Math.min(page.getHeight(), py + page.getHeight() * 0.25);
+      if (q.foto) link(page, [x - k, py - k, x + k, py + k], q.foto.page, q.foto.top);
+      else if (q.row) link(page, [x - k, py - k, x + k, py + k], q.row.page, q.row.y + 40);
+      if (q.row) {
+        link(q.row.page, [M, q.row.y - 5, cols[2] - 4, q.row.y + 12], page, planTop);
+        if (q.foto) link(q.row.page, [cols[4] - 4, q.row.y - 5, W - M, q.row.y + 12], q.foto.page, q.foto.top);
+      }
+      if (q.foto) link(q.foto.page, [q.foto.x, q.foto.y, q.foto.x + q.foto.w, q.foto.y + q.foto.w], page, planTop);
     }
 
     // Pie de página en las hojas de Automa
@@ -1480,10 +1508,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
     return btoa(s);
   }
+  // Qué es cada círculo, por color, con sus números en el plano. Ej. "Falta caja · Obra: 2, 5 | Falta tubería: 1"
+  function detalles() {
+    const d = {};
+    for (const st of ["rojo", "amarillo", "azul", "verde"]) {
+      const g = new Map();
+      S.marks.filter(m => isCircle(m) && m.st === st).sort((a, b) => a.n - b.n).forEach(m => { const k = label(m); g.set(k, [...(g.get(k) || []), m.n]); });
+      d["det_" + st] = [...g].map(([k, ns]) => `${k}: ${ns.join(", ")}`).join(" | ");
+    }
+    return d;
+  }
   async function queueOdoo(file) {
     const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
-    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
+    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, ...detalles(), archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
     await DB.outPut(S.meta.rid, { body, obra: S.meta.obra, fecha: S.meta.fecha, at: Date.now() });
     await paintPending();
     return flushOdoo(true);
