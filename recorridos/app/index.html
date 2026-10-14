@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 52;
+  const APP_VERSION = 53;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -257,7 +257,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     amarillo: [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: MOTIVOS, multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
     azul:     [{ k: "mot", lbl: "¿Qué cable?", opts: ["Control/Lutron", "Red", "Bocina", "Cámara", "Cortina", "Fuerza", "Otro"] },
                { k: "resp", lbl: "¿Qué sigue?", opts: ["Instalar equipo", "Esperar acabados de obra", "Falta equipo/material"] }],
-    verde:    [{ k: "resp", lbl: "¿Cómo quedó?", opts: ["Instalado", "Instalado y programado"] }],
+    verde:    [{ k: "resp", lbl: "¿Cómo quedó?", opts: ["Listo", "Instalado", "Instalado y programado"] }],
   };
   const TXT_COL = { Negro: [0.1, 0.1, 0.1], Rojo: [0.80, 0.12, 0.10], Amarillo: [0.62, 0.45, 0.00], Azul: [0.08, 0.40, 0.75], Verde: [0.08, 0.50, 0.20] };
   const TXT_CSS = { Negro: "var(--ink)", Rojo: "var(--rojo)", Amarillo: "#9e7300", Azul: "var(--azul)", Verde: "var(--verde)" };
