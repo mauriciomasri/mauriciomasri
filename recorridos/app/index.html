@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 47;
+  const APP_VERSION = 50;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -243,7 +243,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     azul:     { name: "Tubería y cableado OK", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
     verde:    { name: "Terminado con equipo",  tool: "Terminado", rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
   };
-  const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Sacar cable", "Sacar contacto", "Otro"];
+  const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Sacar cable", "Sacar contacto", "Definir ubicación", "Otro"];
   const RESP = ["Automa", "Obra"];
   // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
   // La lista viene de Odoo (Recorridos > Empleados, los que están prendidos) junto con el catálogo de planos.
@@ -254,7 +254,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const OPC = {
     rojo:     [{ k: "mot", lbl: "¿Qué falta?", opts: ["Falta tubería", "Falta caja", "Falta bajada", "Tubería tapada", "Falta llegar al registro/centro de carga", "Otro"] },
                { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
-    amarillo: [{ k: "mot", lbl: "¿Qué falta?", opts: MOTIVOS }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
+    amarillo: [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: MOTIVOS, multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
     azul:     [{ k: "mot", lbl: "¿Qué cable?", opts: ["Control/Lutron", "Red", "Bocina", "Cámara", "Cortina", "Fuerza", "Otro"] },
                { k: "resp", lbl: "¿Qué sigue?", opts: ["Instalar equipo", "Esperar acabados de obra", "Falta equipo/material"] }],
     verde:    [{ k: "resp", lbl: "¿Cómo quedó?", opts: ["Instalado", "Instalado y programado"] }],
@@ -287,7 +287,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   // Texto junto al círculo (en el plano y en el PDF): lo que se eligió en las opciones de ese color.
   function label(m) {
-    const mot = m.mot && m.mot !== "Otro" ? m.mot : "";
+    const mot = String(m.mot || "").split(", ").filter(x => x && x !== "Otro").join(", ");
     if (m.st === "verde") return m.resp || mot || "Terminado";
     const base = mot || (m.st === "rojo" ? "Falta tubería" : m.st === "azul" ? "Cableado OK" : (m.nota || "Detalle"));
     return m.resp ? `${base} · ${m.resp}` : base;
@@ -592,7 +592,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   sc.addEventListener("pointerdown", e => {
     cancelAnimationFrame(inertiaRaf);
+    // Primer dedo de un gesto nuevo: si quedó algún dedo "colgado" de antes (se soltó fuera del plano
+    // y no llegó su aviso), se limpia. Eso era lo que de repente atontaba el pellizco.
+    if (e.isPrimary && ptrs.size) {
+      ptrs.clear(); pan = null; drag = null; tapStart = null;
+      if (pinch) { pinch = null; wrap.style.transform = ""; }
+    }
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { sc.setPointerCapture(e.pointerId); } catch (err) {}
     if (ptrs.size === 1) tapStart = { x: e.clientX, y: e.clientY, t: Date.now() };
     // Modo Mover: arrastrar un círculo/texto lo cambia de lugar; arrastrar el plano lo desplaza.
     if (ptrs.size === 1 && S.tool === "mano" && viewport) {
@@ -728,6 +735,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   sc.addEventListener("pointerup", e => endPtr(e, false));
   sc.addEventListener("pointercancel", e => endPtr(e, true));
+  // Por si el dedo se suelta fuera del plano: también se escucha en toda la pantalla.
+  window.addEventListener("pointerup", e => endPtr(e, false));
+  window.addEventListener("pointercancel", e => endPtr(e, true));
+  sc.addEventListener("lostpointercapture", e => endPtr(e, true));
   function clamp(z) { return Math.min(S.fitZoom * 8, Math.max(S.fitZoom * 0.6, z)); }
   async function zoomBy(f) {
     const old = S.zoom, nz = clamp(old * f);
@@ -780,20 +791,30 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     $("scrim").addEventListener("click", e => { if (Date.now() - t0 > 500 && e.target.id === "scrim" && !$("mObra") && !$("pvFix")) closeSheet(); });
     bind();
   }
-  function chips(name, opts, val) {
-    return `<div class="chips" data-group="${name}">` + opts.map(o => `<button type="button" class="chip" data-v="${esc(o)}" aria-pressed="${o === val}">${esc(o)}</button>`).join("") + `</div>`;
+  // multi: se pueden prender varias opciones; se guardan juntas separadas por coma ("Sacar cable, Definir ubicación").
+  const splitOpts = v => String(v || "").split(", ").filter(Boolean);
+  function chips(name, opts, val, multi) {
+    const on = o => multi ? splitOpts(val).includes(o) : o === val;
+    return `<div class="chips" data-group="${name}"${multi ? ' data-multi="1"' : ""}>` + opts.map(o => `<button type="button" class="chip" data-v="${esc(o)}" aria-pressed="${on(o)}">${esc(o)}</button>`).join("") + `</div>`;
   }
   function bindChips(root, name, cb) {
-    root.querySelectorAll(`[data-group="${name}"] .chip`).forEach(c => c.onclick = () => {
-      root.querySelectorAll(`[data-group="${name}"] .chip`).forEach(x => x.setAttribute("aria-pressed", x === c ? "true" : "false"));
-      cb(c.dataset.v);
+    const g = root.querySelector(`[data-group="${name}"]`); if (!g) return;
+    const all = [...g.querySelectorAll(".chip")];
+    all.forEach(c => c.onclick = () => {
+      if (g.dataset.multi) {
+        c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+        cb(all.filter(x => x.getAttribute("aria-pressed") === "true").map(x => x.dataset.v).join(", "));
+      } else {
+        all.forEach(x => x.setAttribute("aria-pressed", x === c ? "true" : "false"));
+        cb(c.dataset.v);
+      }
     });
   }
   function openMarkSheet(m, fresh) {
     const isA = m.st === "amarillo";
     sheet(`
       <h2><i class="dot c-${m.st}" style="width:16px;height:16px"></i>Salida ${m.n} · ${ST[m.st].name}</h2>
-      ${(OPC[m.st] || []).map(o => `<div class="field"><label class="lbl">${o.lbl}</label>${chips(o.k, o.opts, m[o.k])}</div>`).join("")}
+      ${(OPC[m.st] || []).map(o => `<div class="field"><label class="lbl">${o.lbl}</label>${chips(o.k, o.opts, m[o.k], o.multi)}</div>`).join("")}
       <div class="field"><label class="lbl" for="notaIn">Nota${isA ? "" : " (opcional)"}</label>
         <textarea id="notaIn" placeholder="${isA ? "Ej. caja 5 cm abajo del nivel" : "Opcional"}">${esc(m.nota || "")}</textarea></div>
       <div class="field"><label class="lbl">Fotos</label><div class="fotos" id="fotosBox"></div></div>
@@ -1435,23 +1456,33 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     // ¿Hay un recorrido anterior de este plano? Se ofrece el más reciente: el de este iPad o el último guardado en Odoo (de cualquier técnico).
     const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
     const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
-    if (await recuperar(dk(meta))) return;
+    // Siempre se pregunta cómo abrir el plano: seguir lo que quedó sin guardar en este equipo,
+    // partir del último recorrido guardado (de cualquier técnico) o empezar con el plano limpio.
+    const dr = await DB.get(dk(meta));
+    const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
     let prev = null;
     const local = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt)[0];
-    if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este iPad" };
+    if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este equipo" };
     const u = pl.ultimo;
     if (u && u.url && (!prev || (u.fecha || "") > (prev.fecha || ""))) {
       const r = await ultimoDeOdoo(pl, u, base);
       if (r) prev = { ...r, fecha: u.fecha || r.fecha, tecnico: u.tecnico || r.tecnico, donde: "en Odoo" };
     }
-    const limpio = () => { closeSheet(); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
+    const limpio = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
     $("busy").hidden = true;
-    if (!prev) return limpio();
+    if (!prev && !draft) return limpio();
+    const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
     sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2>
-      <p class="note">Último recorrido de este plano: <b>${prev.fecha ? fmtFecha(prev.fecha) : "sin fecha"}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}</b> (${prev.donde}).</p>
-      <div class="stack"><button type="button" class="btn primary" id="plPrev">Partir del último recorrido</button><button type="button" class="btn" id="plClean">Plano limpio</button></div>`, () => {
+      ${draft ? `<p class="note">Tienes un recorrido <b>sin guardar</b> de este plano en este equipo (${nDraft} círculo${nDraft === 1 ? "" : "s"}).</p>` : ""}
+      ${prev ? `<p class="note">Último recorrido guardado: <b>${prev.fecha ? fmtFecha(prev.fecha) : "sin fecha"}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}</b> (${prev.donde}).</p>` : ""}
+      <div class="stack">
+        ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
+        ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">Partir del último recorrido</button>` : ""}
+        <button type="button" class="btn" id="plClean">Plano limpio</button>
+      </div>`, () => {
       $("plClean").onclick = limpio;
-      $("plPrev").onclick = () => { closeSheet(); $("busy").hidden = false;
+      if (draft) $("plDraft").onclick = () => recuperar(dk(meta));
+      if (prev) $("plPrev").onclick = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false;
         startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: newId() }, 1, true); };
     });
   }
