@@ -233,7 +233,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 50;
+  const APP_VERSION = 51;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -285,12 +285,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-  // Texto junto al círculo (en el plano y en el PDF): lo que se eligió en las opciones de ese color.
+  // Texto junto al círculo (en el plano y en el PDF): solo lo que puso el técnico (opciones o, si no eligió, su nota).
+  // Ya no se pone nada automático como "Terminado".
   function label(m) {
     const mot = String(m.mot || "").split(", ").filter(x => x && x !== "Otro").join(", ");
-    if (m.st === "verde") return m.resp || mot || "Terminado";
-    const base = mot || (m.st === "rojo" ? "Falta tubería" : m.st === "azul" ? "Cableado OK" : (m.nota || "Detalle"));
-    return m.resp ? `${base} · ${m.resp}` : base;
+    return [mot, m.resp].filter(Boolean).join(" · ") || (m.nota || "").trim();
   }
 
   /* ---------- draft (IndexedDB) ---------- */
@@ -434,7 +433,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const r = Math.max(6, rpt * k), c = `var(--${m.st})`;
       const fs = Math.max(8, rpt * 0.7 * k);
       out.push(`<g data-id="${m.id}"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="${Math.max(2, rpt * 0.22 * k)}"/>` +
-        `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n} · ${esc(label(m))}</text>${m.fotos && m.fotos.length ? camBadge(x, y - r - Math.max(4, r * 0.3) - 1.5, Math.max(4, r * 0.3), m.fotos.length) : ""}</g>`);
+        `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n}${label(m) ? " · " + esc(label(m)) : ""}</text>${m.fotos && m.fotos.length ? camBadge(x, y - r - Math.max(4, r * 0.3) - 1.5, Math.max(4, r * 0.3), m.fotos.length) : ""}</g>`);
     }
     $("ov").innerHTML = out.join("");
     const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
@@ -788,7 +787,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     $("sheetHost").innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
     // El "clic fantasma" del mismo toque que abrió la ventana no la cierra.
     const t0 = Date.now();
-    $("scrim").addEventListener("click", e => { if (Date.now() - t0 > 500 && e.target.id === "scrim" && !$("mObra") && !$("pvFix")) closeSheet(); });
+    $("scrim").addEventListener("click", e => {
+      if (Date.now() - t0 <= 500 || e.target.id !== "scrim" || $("mObra") || $("pvFix")) return;
+      if ($("okMk")) return $("okMk").click(); // ventana de un círculo: tocar afuera = "Listo" (pide al menos un detalle)
+      closeSheet();
+    });
     bind();
   }
   // multi: se pueden prender varias opciones; se guardan juntas separadas por coma ("Sacar cable, Definir ubicación").
@@ -815,11 +818,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     sheet(`
       <h2><i class="dot c-${m.st}" style="width:16px;height:16px"></i>Salida ${m.n} · ${ST[m.st].name}</h2>
       ${(OPC[m.st] || []).map(o => `<div class="field"><label class="lbl">${o.lbl}</label>${chips(o.k, o.opts, m[o.k], o.multi)}</div>`).join("")}
-      <div class="field"><label class="lbl" for="notaIn">Nota${isA ? "" : " (opcional)"}</label>
-        <textarea id="notaIn" placeholder="${isA ? "Ej. caja 5 cm abajo del nivel" : "Opcional"}">${esc(m.nota || "")}</textarea></div>
+      <div class="field"><label class="lbl" for="notaIn">Nota</label>
+        <textarea id="notaIn" placeholder="${isA ? "Ej. caja 5 cm abajo del nivel" : "Ej. listo para instalar"}">${esc(m.nota || "")}</textarea></div>
+      <p class="note" id="mkFalta" style="color:var(--rojo)" hidden>Pon al menos un detalle: elige una opción o escribe una nota.</p>
       <div class="field"><label class="lbl">Fotos</label><div class="fotos" id="fotosBox"></div></div>
       <div class="row">
-        ${fresh ? "" : `<button type="button" class="btn danger" id="delMk">Borrar círculo</button>`}
+        <button type="button" class="btn danger" id="delMk">${fresh ? "Quitar círculo" : "Borrar círculo"}</button>
         <button type="button" class="btn primary" id="okMk">Listo</button>
       </div>`, () => {
       const root = $("sheetHost");
@@ -836,6 +840,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       paintFotos();
       $("okMk").onclick = () => {
         const nota = $("notaIn").value.trim();
+        // No se avanza sin al menos un detalle (una opción o una nota).
+        if (!draft.mot && !draft.resp && !nota) { $("mkFalta").hidden = false; $("mkFalta").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Pon al menos un detalle"); return; }
         const fotosChanged = JSON.stringify(fotos) !== JSON.stringify(m.fotos || []);
         if (draft.mot !== m.mot || draft.resp !== m.resp || nota !== (m.nota || "") || fotosChanged) {
           if (!fresh) snapshot();
@@ -844,7 +850,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         closeSheet();
       };
       const del = $("delMk");
-      if (del) del.onclick = () => { snapshot(); S.marks = S.marks.filter(x => x !== m); changed(); closeSheet(); };
+      if (del) del.onclick = () => { if (!fresh) snapshot(); S.marks = S.marks.filter(x => x !== m); renumber(); changed(); closeSheet(); };
     });
   }
   function pickPhoto(cb) {
@@ -1003,7 +1009,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         at(m).plan = { page: pg, x: m.x, y: m.y, r: rpt };
         const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
         const [tx, ty] = v1.convertToPdfPoint(vx + rpt * 1.3, vy + rpt * 0.25);
-        pg.drawText(safe(`${m.n} · ${label(m)}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
+        pg.drawText(safe(`${m.n}${label(m) ? " · " + label(m) : ""}`), { x: tx, y: ty, size: rpt * 0.7, font, color: rgb(...c.text), rotate: degrees(rot) });
         if (m.fotos && m.fotos.length) {
           const [bx, by] = v1.convertToPdfPoint(vx, vy - rpt * 1.35);
           pg.drawCircle({ x: bx, y: by, size: rpt * 0.3, color: rgb(0.17, 0.2, 0.25), borderColor: rgb(1, 1, 1), borderWidth: rpt * 0.05 });
@@ -1087,7 +1093,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         if (r % 2) sp.drawRectangle({ x: M, y: y - 5, width: W - 2 * M, height: 17, color: TINT });
         sp.drawCircle({ x: cols[1] + 4, y: y + 3, size: 3.5, borderColor: rgb(...c.rgb), borderWidth: 1.5 });
         at(m).row = { page: sp, y };
-        const row = [String(m.n), c.name, m.mot || (m.st === "rojo" ? "Tubería" : "-"), m.resp || "-", (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
+        const row = [String(m.n), c.name, m.mot || "-", m.resp || "-", (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
         row.forEach((v, i) => {
           const maxW = (i === 4 ? W - M : cols[i + 1]) - cols[i] - 8 - (i === 1 ? 12 : 0);
           sp.drawText(fit(v, 9, i === 1 ? font : fontR, maxW), { x: cols[i] + (i === 1 ? 12 : 0), y, size: 9, font: i === 1 ? font : fontR, color: i === 1 ? rgb(...c.text) : INK });
@@ -1548,7 +1554,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const d = {};
     for (const st of ["rojo", "amarillo", "azul", "verde"]) {
       const g = new Map();
-      S.marks.filter(m => isCircle(m) && m.st === st).sort((a, b) => a.n - b.n).forEach(m => { const k = label(m); g.set(k, [...(g.get(k) || []), m.n]); });
+      S.marks.filter(m => isCircle(m) && m.st === st).sort((a, b) => a.n - b.n).forEach(m => { const k = label(m) || "(sin detalle)"; g.set(k, [...(g.get(k) || []), m.n]); });
       d["det_" + st] = [...g].map(([k, ns]) => `${k}: ${ns.join(", ")}`).join(" | ");
     }
     return d;
