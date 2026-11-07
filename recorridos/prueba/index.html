@@ -71,8 +71,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--plan) 70%,transparent);font-family:var(--f-label);font-size:18px;font-weight:600}
 
 /* empty state */
-.empty{position:absolute;inset:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 16px}
-.empty .card{max-width:440px;display:flex;flex-direction:column;gap:16px}
+.empty{position:absolute;inset:0;overflow:auto;display:flex;justify-content:center;padding:24px 16px}
+.empty .card{max-width:440px;width:100%;margin:auto;display:flex;flex-direction:column;gap:16px}
 .empty .brand{width:min(260px,70%);height:auto;align-self:center;margin-bottom:8px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .empty .brand{filter:invert(1) hue-rotate(180deg)}}
 :root[data-theme="dark"] .empty .brand{filter:invert(1) hue-rotate(180deg)}
@@ -145,6 +145,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .pendpill{border:0;border-radius:999px;background:#e8a800;color:#16202b;font-family:var(--f-label);font-weight:700;font-size:14px;padding:6px 10px}
 .hlist{display:flex;flex-direction:column;gap:8px}
 .hrow{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.hrow.et-ok{border-color:var(--verde);background:color-mix(in srgb,var(--verde) 9%,var(--panel))}
+.hrow.et-ok .hinfo span{color:var(--verde);font-weight:600}
+.hrow.et-pend{border-color:color-mix(in srgb,var(--rojo) 55%,var(--line));background:color-mix(in srgb,var(--rojo) 6%,var(--panel))}
+.hrow.et-pend .hinfo span{color:var(--rojo)}
+.resumen{display:flex;flex-direction:column;gap:8px}
+.resumen h2{font-family:var(--f-label);font-size:21px;margin:8px 0 0}
+.resumen .rob{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel);display:flex;flex-direction:column;gap:4px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.resumen .rob b{font-family:var(--f-label);font-size:17px}
+.resumen .rob .pl{display:flex;gap:8px;align-items:baseline;font-size:14px;flex-wrap:wrap}
+.resumen .rob .pl i{font-style:normal;font-weight:600}
+.resumen .rob.ok{border-color:var(--verde)}
+.resumen .rob.pend{border-color:color-mix(in srgb,var(--rojo) 55%,var(--line))}
 .hinfo{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
 .hinfo b{font-family:var(--f-label);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hinfo span{font-size:13px;color:var(--muted)}
@@ -192,10 +204,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <h1>Marca el avance sobre el plano</h1>
         <ol class="steps">
           <li style="display:contents"><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
-          <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
-          <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
+          <li style="display:contents"><b>2</b><span>Elige la etapa y marca cada salida: <strong class="c-verde">bien</strong>, <strong style="color:var(--amarillo-ink)">detalle</strong> o <strong class="c-rojo">mal</strong>.</span></li>
+          <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong>. En esta prueba no se sube a Odoo: se descarga el PDF.</span></li>
         </ol>
-        <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>.</p>
+
         <div class="actions">
           <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
           <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
@@ -204,6 +216,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
         </div>
+        <div class="resumen" id="resumen" hidden></div>
         <div class="install" id="installHint" hidden>
           <b>Instálala para usarla sin internet</b>
           <span id="installTxt"></span>
@@ -289,6 +302,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       mal: ["No se pudo instalar", "Equipo dañado", "Falta equipo"] },
   ];
   const etapaDe = n => ETAPAS.find(e => e.n === +n) || null;
+  // Cómo quedó un recorrido guardado: terminado si todas sus salidas están bien y revisadas.
+  function estadoRec(h) {
+    const c = h.marks.filter(isCircle);
+    const mal = c.filter(m => m.st === "rojo").length, det = c.filter(m => m.st === "amarillo").length;
+    const sinRev = c.filter(m => m.rev === false || m.st === "gris").length, bien = c.filter(m => m.st === "verde" && m.rev !== false).length;
+    const pend = mal + det + sinRev;
+    const partes = [mal && `${mal} mal`, det && `${det} detalle`, sinRev && `${sinRev} sin revisar`].filter(Boolean);
+    return { total: c.length, bien, pend, ok: c.length > 0 && pend === 0, txt: partes.join(" · ") };
+  }
   const etapaTxt = n => { const e = etapaDe(n); return e ? `Etapa ${e.n}: ${e.nombre}` : ""; };
   function usarEtapa(n) {
     const e = etapaDe(n); if (!e) return;
@@ -1451,7 +1473,34 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       paintHistBtn();
     } catch (e) {}
   }
+  // Resumen en la pantalla de inicio: qué le falta a cada obra (etapa en la que va y sus pendientes).
+  async function pintarResumen() {
+    const box = $("resumen"); if (!box) return;
+    let lista = null; try { lista = JSON.parse(localStorage.getItem("automa-cat") || "null"); } catch (e) {}
+    if (!lista || !lista.length) { box.hidden = true; return; }
+    const hist = (await DB.histAll()).sort((a, b) => b.savedAt - a.savedAt);
+    const filas = [];
+    for (const it of lista) for (const pl of (it.planos || [])) {
+      const hs = hist.filter(h => h.meta.plano_id === pl.id && h.meta.etapa);
+      const et = hs.length ? Math.max(...hs.map(h => h.meta.etapa)) : 0;
+      const h = et ? hs.find(x => x.meta.etapa === et) : null;
+      const e = h ? estadoRec(h) : null;
+      let txt, cls, orden;
+      if (!h) { txt = "Sin recorridos por etapa"; cls = ""; orden = 2; }
+      else if (e.ok) { const sig = etapaDe(et + 1); txt = `✓ ${etapaTxt(et)} terminada${sig ? ` · sigue: ${sig.nombre}` : " · obra terminada"}`; cls = "ok"; orden = sig ? 1 : 3; }
+      else { txt = `${etapaTxt(et)} · ${e.txt}`; cls = "pend"; orden = 0; }
+      filas.push({ it, pl, txt, cls, orden, fecha: h ? h.meta.fecha : "", pend: e ? e.pend : 0 });
+    }
+    filas.sort((a, b) => a.orden - b.orden || b.pend - a.pend || (b.fecha || "").localeCompare(a.fecha || ""));
+    box.hidden = false;
+    box.innerHTML = `<h2>Qué le falta a cada obra</h2>` + filas.map((f, i) => `<button type="button" class="rob ${f.cls}" data-i="${i}">
+        <b>${esc(f.it.cliente_nombre || f.it.obra)}${f.it.concepto ? " · " + esc(f.it.concepto) : ""}</b>
+        <span class="pl"><i>${esc(f.pl.tipo)}</i><span class="${f.cls === "ok" ? "c-verde" : f.cls === "pend" ? "c-rojo" : "c-porrev"}">${esc(f.txt)}</span>${f.fecha ? `<span class="c-porrev">${fmtFecha(f.fecha)}</span>` : ""}</span>
+      </button>`).join("");
+    box.querySelectorAll(".rob").forEach(b => b.onclick = () => { const f = filas[+b.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
+  }
   async function paintHistBtn() {
+    pintarResumen();
     const n = (await DB.histAll()).length, b = $("histBtn");
     // El botón ya no se muestra: los recorridos se retoman desde Planos de obras. La copia local se sigue usando ahí (y sin señal).
     b.hidden = true; b.textContent = `Mis recorridos (${n})`;
@@ -1480,6 +1529,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   $("histBtn").onclick = openHist;
   paintHistBtn();
+  // Al abrir la app se actualiza en silencio la lista de obras para el resumen del inicio.
+  setTimeout(async () => { const base = planosBase(); if (!base) return;
+    try { const l = (await loadJs(`${base.origin}/web/content/${base.id}?access_token=${base.token}`, "__automaPlanos", 30000))[0]; localStorage.setItem("automa-cat", JSON.stringify(l)); pintarResumen(); } catch (e) {} }, 800);
   function downloadFile(file) {
     const a = document.createElement("a"), url = URL.createObjectURL(file);
     a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
@@ -1629,6 +1681,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     try {
       lista = (await loadJs(`${base.origin}/web/content/${base.id}?access_token=${base.token}`, "__automaPlanos", 30000))[0];
       try { localStorage.setItem("automa-cat", JSON.stringify(lista)); } catch (e) {}
+      pintarResumen();
     } catch (e) {
       if (e.message === "red" && await conexionVigente() === false) { $("busy").hidden = true; $("busy").textContent = "Cargando plano…"; conexionVencida(); return; }
       offline = true;
@@ -1713,12 +1766,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const hist = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt);
     const ultimaDe = n => hist.find(h => (h.meta.etapa || 0) === n);
     const estado = n => {
-      const h = ultimaDe(n); if (!h) return { txt: "Sin empezar", cls: "" };
-      const c = h.marks.filter(isCircle), bien = c.filter(m => m.st === "verde").length;
-      return bien === c.length && c.length ? { txt: `✓ ${bien}/${c.length} · ${fmtFecha(h.meta.fecha)}`, cls: "ok" } : { txt: `${bien}/${c.length} bien · ${fmtFecha(h.meta.fecha)}`, cls: "cur" };
+      const h = ultimaDe(n); if (!h) return { txt: "Pendiente · sin empezar", cls: "pend" };
+      const e = estadoRec(h);
+      return e.ok ? { txt: `✓ Terminada · ${e.bien}/${e.total} bien · ${fmtFecha(h.meta.fecha)}`, cls: "ok" }
+        : { txt: `Pendiente · ${e.txt} · ${fmtFecha(h.meta.fecha)}`, cls: "pend cur" };
     };
     sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2><p class="note">¿Qué etapa vas a recorrer?</p>
-      <div class="hlist">${ETAPAS.map(e => { const s2 = estado(e.n); return `<div class="hrow"><div class="hinfo"><b>${e.n} · ${esc(e.nombre)}</b><span class="${s2.cls === "ok" ? "c-verde" : ""}">${s2.txt}</span></div><button type="button" class="btn${s2.cls === "cur" ? " primary" : ""}" data-et="${e.n}">Abrir</button></div>`; }).join("")}</div>`, () => {
+      <div class="hlist">${ETAPAS.map(e => { const s2 = estado(e.n); return `<div class="hrow et-${s2.cls.split(" ")[0]}"><div class="hinfo"><b>${e.n} · ${esc(e.nombre)}</b><span>${s2.txt}</span></div><button type="button" class="btn${s2.cls.includes("cur") ? " primary" : ""}" data-et="${e.n}">Abrir</button></div>`; }).join("")}</div>`, () => {
       $("sheetHost").querySelectorAll("[data-et]").forEach(btn => btn.onclick = () => abrirEtapa(+btn.dataset.et));
     });
     const abrirEtapa = async n => {
