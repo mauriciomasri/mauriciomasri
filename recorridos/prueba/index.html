@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>Recorridos · PRUEBA</title>
+<title>Recorridos · PRUEBA etapas</title>
 <meta name="theme-color" content="#1f4e79">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../app/icons/icon-192.png">
@@ -21,7 +21,7 @@
 *{-webkit-tap-highlight-color:transparent}
 body{margin:0;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 /* Layout: one-screen tool — header strip, plan viewport, fixed tool tray at the thumb */
-:root{
+:root{--gris:#9aa3ad;
   --bg:#eef1f4; --panel:#ffffff; --ink:#16202b; --muted:#5b6876; --line:#d3dae2;
   --accent:#1f4e79; --accent-ink:#ffffff; --plan:#e3e8ee;
   --rojo:#d93025; --amarillo:#e8a800; --amarillo-ink:#8a6400; --azul:#1565c0; --verde:#1e9e48;
@@ -50,6 +50,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .counts span{display:flex;align-items:center;gap:4px}
 .dot{width:12px;height:12px;border-radius:50%;border:2.5px solid currentColor;display:inline-block}
 .c-porrev{color:var(--muted)}
+.c-gris{color:#8a96a3}
 .prueba-band{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#7a3cc2;color:#fff;font:600 12px/1 Barlow,sans-serif;text-align:center;padding:4px 0 calc(4px + env(safe-area-inset-bottom,0px));pointer-events:none;letter-spacing:.04em}
 .c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-azul{color:var(--azul)}.c-verde{color:var(--verde)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:600}
@@ -175,7 +176,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="counts" id="counts" hidden>
       <span class="c-rojo"><i class="dot"></i><b id="nR">0</b></span>
       <span class="c-amarillo"><i class="dot"></i><b id="nA">0</b></span>
-      <span class="c-azul"><i class="dot"></i><b id="nZ">0</b></span>
+      <span class="c-azul" hidden><i class="dot"></i><b id="nZ">0</b></span>
       <span class="c-verde"><i class="dot"></i><b id="nV">0</b></span>
       <span class="c-porrev" id="nPx" hidden><i class="dot" style="border-style:dashed"></i><b id="nP">0</b></span>
     </div>
@@ -238,10 +239,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   </main>
 
   <nav class="tray" id="tray" hidden>
-    <button class="tool t-rojo" data-tool="rojo" aria-pressed="true" type="button"><i class="ring"></i>Falta tubo</button>
+    <button class="tool t-rojo" data-tool="rojo" aria-pressed="false" type="button"><i class="ring"></i>Mal</button>
     <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
-    <button class="tool t-azul" data-tool="azul" aria-pressed="false" type="button"><i class="ring"></i>Cableado</button>
-    <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Terminado</button>
+    
+    <button class="tool t-verde" data-tool="verde" aria-pressed="true" type="button"><i class="ring"></i>Bien</button>
     <button class="tool t-texto" data-tool="dibujo" aria-pressed="false" type="button"><span class="ico">✏️</span>Dibujar</button>
     <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
     <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
@@ -260,12 +261,42 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
+  // Recorridos por etapas: cada etapa es su propio plano, con 3 colores (bien, detalle, mal).
+  // "gris" = salida que viene de la etapa anterior y todavía no se revisa en esta.
   const ST = {
-    rojo:     { name: "Falta tubería",     tool: "Falta tubo", rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
-    amarillo: { name: "Detalle pendiente", tool: "Detalle",    rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
-    azul:     { name: "Tubería y cableado OK", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
-    verde:    { name: "Terminado con equipo",  tool: "Terminado", rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+    rojo:     { name: "Mal",     tool: "Mal",     rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
+    amarillo: { name: "Detalle", tool: "Detalle", rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
+    azul:     { name: "Cableado", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
+    verde:    { name: "Bien",    tool: "Bien",    rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+    gris:     { name: "Por revisar", tool: "Por revisar", rgb: [0.60, 0.64, 0.69], text: [0.42, 0.46, 0.50] },
   };
+  const COLORES = ["verde", "amarillo", "rojo"];
+  const ETAPAS = [
+    { n: 1, nombre: "Tuberías con rafia", bien: "Tubería con rafia OK",
+      detalle: ["Falta rafia", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos"],
+      mal: ["Falta tubería", "Falta caja", "Tubería tapada"] },
+    { n: 2, nombre: "Cableado", bien: "Cableado",
+      detalle: ["Falta bajada de cable", "Sacar cable", "Definir ubicación"],
+      mal: ["Falta cablear", "No pasa el cable"] },
+    { n: 3, nombre: "Ubicaciones y bajadas", bien: "Ubicación y bajada OK",
+      detalle: ["Ubicación ligeramente mal", "Falta bajada", "Sacar cable", "Sacar contacto"],
+      mal: ["Ubicación mal", "Cable ahogado", "Cable en plafón"] },
+    { n: 4, nombre: "Supervisión para instalación", bien: "Listo para instalar",
+      detalle: ["Falta resane", "Falta chalupa", "Cable corto"],
+      mal: ["No está listo", "Cable ahogado", "Cable en plafón"] },
+    { n: 5, nombre: "Instalación de equipo", bien: "Instalado",
+      detalle: ["Falta pieza", "Falta placa", "Instalado provisional"],
+      mal: ["No se pudo instalar", "Equipo dañado", "Falta equipo"] },
+  ];
+  const etapaDe = n => ETAPAS.find(e => e.n === +n) || null;
+  const etapaTxt = n => { const e = etapaDe(n); return e ? `Etapa ${e.n}: ${e.nombre}` : ""; };
+  function usarEtapa(n) {
+    const e = etapaDe(n); if (!e) return;
+    ST.verde.name = e.bien; ST.amarillo.name = "Detalle"; ST.rojo.name = "Mal";
+    OPC.verde = [];
+    OPC.amarillo = [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: e.detalle.concat("Otro"), multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }];
+    OPC.rojo = [{ k: "mot", lbl: "¿Qué está mal? (puedes elegir varias)", opts: e.mal.concat("Otro"), multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }];
+  }
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Sacar cable", "Sacar contacto", "Definir ubicación", "Otro"];
   const RESP = ["Automa", "Obra"];
   // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
@@ -274,7 +305,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   try { const t = JSON.parse(localStorage.getItem("automa-tecnicos") || "null"); if (Array.isArray(t)) TECNICOS = t; } catch (e) {}
   window.__automaTecnicos = l => { if (!Array.isArray(l)) return; TECNICOS = l.map(String); try { localStorage.setItem("automa-tecnicos", JSON.stringify(TECNICOS)); } catch (e) {} };
   // Opciones rápidas de cada color (se guardan en mot y resp, igual que el amarillo).
-  const OPC = {
+  let OPC = {
     rojo:     [{ k: "mot", lbl: "¿Qué falta?", opts: ["Falta tubería", "Falta caja", "Falta bajada", "Tubería tapada", "Falta llegar al registro/centro de carga", "Otro"] },
                { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
     amarillo: [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: MOTIVOS, multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
@@ -293,7 +324,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   const S = {
     bytes: null, doc: null, page: 1, pages: 0, zoom: 1, fitZoom: 1,
-    tool: "rojo", drawMode: "flecha", marks: [], nextN: 1, undo: [],
+    tool: "verde", drawMode: "flecha", marks: [], nextN: 1, undo: [],
     meta: { obra: "", tecnico: "", fecha: today() },
   };
   let pageObj = null, viewport = null, renderTask = null;
@@ -336,7 +367,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     async del(k = "draft") { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").delete(k); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
   };
   let draftT = 0;
-  const dk = m => "draft-" + ((m && m.plano_id) || "demo");
+  const dk = m => "draft-" + ((m && m.plano_id) || "demo") + "-e" + ((m && m.etapa) || 0);
   const draftData = () => ({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page });
   // Si quedó algo sin guardar de este plano, se abre tal cual (sin preguntar) y sigue marcado como pendiente de guardar.
   async function recuperar(k) {
@@ -400,6 +431,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   async function startSession(bytes, marks, meta, page, askMeta, prev) {
     S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
+    usarEtapa(S.meta.etapa || 1); if (!S.meta.etapa) S.meta.etapa = 1;
     if (!S.meta.rid) S.meta.rid = newId();
     renumber();
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
@@ -465,7 +497,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n}${label(m) ? " · " + esc(label(m)) : ""}</text>${m.fotos && m.fotos.length ? camBadge(...camPos(x, y, r), m.fotos.length) : ""}</g>`);
     }
     $("ov").innerHTML = out.join("");
-    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
     $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nZ").textContent = c.azul; $("nV").textContent = c.verde;
     const np = S.marks.filter(m => isCircle(m) && m.rev === false).length; $("nPx").hidden = !np; $("nP").textContent = np; $("nPx").title = `${np} por revisar`;
@@ -503,7 +535,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   function refreshHeader() {
     $("obraLbl").textContent = (S.meta.obra || "Obra sin nombre") + (S.meta.plano ? " · " + S.meta.plano.split(" - ")[0] : "");
-    $("metaLbl").textContent = `${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
+    $("metaLbl").textContent = `${S.meta.etapa ? etapaTxt(S.meta.etapa) + " · " : ""}${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
   }
 
   /* ---------- editing ---------- */
@@ -598,10 +630,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const n = porRevisar().length;
     toast(`Salida ${m.n}: sigue igual${n ? ` · faltan ${n}` : " · ya revisaste todas"}`, "Cambiar", () => openMarkSheet(m, false));
   }
-  function paraRevisar(marks, fecha, tecnico) {
+  function paraRevisar(marks, fecha, tecnico, etapaPrev, etapaNueva) {
+    const cambia = etapaPrev !== etapaNueva;
+    const bienPrev = etapaDe(etapaPrev) ? etapaDe(etapaPrev).bien : "";
     marks.forEach(m => {
       if (!isCircle(m)) return;
-      m.prev = { st: m.st, mot: m.mot || "", resp: m.resp || "", nota: m.nota || "", fotos: (m.fotos || []).length, fecha: fecha || "", tecnico: tecnico || "" };
+      m.prev = { st: m.st, mot: m.mot || "", resp: m.resp || "", nota: m.nota || "", fotos: cambia ? 0 : (m.fotos || []).length, fecha: fecha || "", tecnico: tecnico || "", etapa: etapaPrev || 0, bien: bienPrev };
+      if (cambia) { m.st = "gris"; m.mot = ""; m.resp = ""; m.nota = ""; m.fotos = []; }
       m.rev = false; delete m.retro; delete m.nueva;
     });
     return marks;
@@ -612,7 +647,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const colorTool = S.tool in ST;
     const hit = hitTest(px, py, colorTool ? "circle" : "any");
     const textTool = S.tool === "dibujo" && S.drawMode === "texto";
-    if (hit && isCircle(hit) && hit.rev === false && S.tool !== "borrar" && S.tool !== "dibujo") { confirmar(hit); return; }
+    if (hit && isCircle(hit) && hit.rev === false && S.tool !== "borrar" && S.tool !== "dibujo") {
+      if (hit.st === "gris") { openMarkSheet(hit, false, COLORES.includes(S.tool) ? S.tool : "verde"); return; }
+      confirmar(hit); return;
+    }
     if (S.tool === "mano" || (textTool && hit && isTxt(hit))) { if (hit && !isDraw(hit)) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
     if (textTool) { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
     if (S.tool === "dibujo") return;
@@ -887,18 +925,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     });
   }
   function openMarkSheet(m, fresh, toSt) {
-    let st = toSt || m.st;
+    let st = toSt || (m.st === "gris" ? "verde" : m.st);
     const draft = { mot: st === m.st ? m.mot : "", resp: st === m.st ? m.resp : "" };
     const opcHtml = () => (OPC[st] || []).map(o => `<div class="field"><label class="lbl">${o.lbl}</label>${chips(o.k, o.opts, draft[o.k], o.multi)}</div>`).join("");
     sheet(`
       <h2>Salida ${m.n}</h2>
-      <div class="field"><label class="lbl">Color</label><div class="stc" id="stc">${Object.keys(ST).map(k => `<button type="button" class="c-${k}" data-st="${k}" aria-pressed="${k === st}"><i class="dot"></i>${ST[k].tool}</button>`).join("")}</div>
-        <p class="note" id="stCambio"${st === m.st || fresh ? " hidden" : ""}>Cambia de <b class="c-${m.st}">${ST[m.st].tool}</b> a <b id="stNuevo"></b> al picar Listo.</p></div>
+      <div class="field"><label class="lbl">Color</label><div class="stc" id="stc">${COLORES.map(k => `<button type="button" class="c-${k}" data-st="${k}" aria-pressed="${k === st}"><i class="dot"></i>${ST[k].tool}</button>`).join("")}</div>
+        <p class="note" id="stCambio"${st === m.st || fresh || m.st === "gris" ? " hidden" : ""}>Cambia de <b class="c-${m.st}">${ST[m.st].tool}</b> a <b id="stNuevo"></b> al picar Listo.</p></div>
       <div id="opcBox">${opcHtml()}</div>
       <div class="field"><label class="lbl" for="notaIn">Nota</label>
         <textarea id="notaIn" placeholder="${st === "amarillo" ? "Ej. caja 5 cm abajo del nivel" : "Ej. listo para instalar"}">${esc(m.nota || "")}</textarea></div>
-      ${m.prev ? `<p class="note">Antes (${m.prev.fecha ? fmtFecha(m.prev.fecha) : "último recorrido"}${m.prev.tecnico ? ", " + esc(m.prev.tecnico) : ""}): <b class="c-${m.prev.st}">${ST[m.prev.st].tool}</b>${(m.prev.mot || m.prev.resp) ? " · " + esc([m.prev.mot, m.prev.resp].filter(Boolean).join(" · ")) : ""}</p>` : ""}
-      <div class="warn" id="retroWarn" hidden><b>↓ Retroceso:</b> antes estaba en <b>${m.prev ? ST[m.prev.st].tool : ""}</b>. Toma una foto para que quede registro.</div>
+      ${m.prev ? `<p class="note">Antes${m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " (" + esc(etapaTxt(m.prev.etapa)) + ")" : ""} · ${m.prev.fecha ? fmtFecha(m.prev.fecha) : "último recorrido"}${m.prev.tecnico ? ", " + esc(m.prev.tecnico) : ""}: <b class="c-${m.prev.st}">${m.prev.st === "verde" && m.prev.bien ? esc(m.prev.bien) : ST[m.prev.st].tool}</b>${(m.prev.mot || m.prev.resp) ? " · " + esc([m.prev.mot, m.prev.resp].filter(Boolean).join(" · ")) : ""}</p>` : ""}
+      <div class="warn" id="retroWarn" hidden><b>↓ Retroceso:</b> antes estaba <b>${m.prev ? (m.prev.st === "verde" ? "bien" : ST[m.prev.st].tool.toLowerCase()) + (m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " en " + etapaTxt(m.prev.etapa) : "") : ""}</b>. Toma una foto para que quede registro.</div>
       <p class="note" id="mkFalta" style="color:var(--rojo)" hidden>Pon al menos un detalle: elige una opción o escribe una nota.</p>
       <div class="field"><label class="lbl">Fotos <span style="text-transform:none;letter-spacing:0">(tócala para verla grande)</span></label><div class="fotos" id="fotosBox"></div></div>
       <div class="row">
@@ -911,10 +949,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const paintSt = () => {
         root.querySelectorAll("#stc button").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === st ? "true" : "false"));
         if ($("stNuevo")) { $("stNuevo").textContent = ST[st].tool; $("stNuevo").className = "c-" + st; }
-        $("stCambio").hidden = fresh || st === m.st;
+        $("stCambio").hidden = fresh || st === m.st || m.st === "gris";
         $("retroWarn").hidden = !esRetro();
       };
-      const esRetro = () => !!(m.prev && RANK[st] < RANK[m.prev.st]);
+      const esRetro = () => !!(m.prev && m.prev.st !== "gris" && (m.prev.etapa === S.meta.etapa ? RANK[st] < RANK[m.prev.st] : (m.prev.st === "verde" && st === "rojo")));
       const t0 = Date.now();
       root.querySelectorAll("#stc button").forEach(b => b.onclick = () => {
         if (b.dataset.st === st || Date.now() - t0 < 600) return; // el mismo toque que abrió la ventana no cambia el color
@@ -936,7 +974,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       $("okMk").onclick = () => {
         const nota = $("notaIn").value.trim();
         // No se avanza sin al menos un detalle (una opción o una nota).
-        if (!draft.mot && !draft.resp && !nota) { $("mkFalta").hidden = false; $("mkFalta").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Pon al menos un detalle"); return; }
+        if (st !== "verde" && !draft.mot && !draft.resp && !nota) { $("mkFalta").hidden = false; $("mkFalta").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Pon al menos un detalle"); return; }
         // Retroceso: estaba mejor en el recorrido anterior. Pide una foto nueva como evidencia.
         if (esRetro() && fotos.length <= (m.prev.fotos || 0)) { $("retroWarn").hidden = false; $("retroWarn").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Toma una foto del retroceso"); return; }
         const fotosChanged = JSON.stringify(fotos) !== JSON.stringify(m.fotos || []);
@@ -1179,9 +1217,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       return H - M - 54;
     };
     const circ = S.marks.filter(isCircle), notas = S.marks.filter(isTxt);
-    const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
+    const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 }; circ.forEach(m => cnt[m.st]++);
     const total = circ.length || 1, pct = k => Math.round(cnt[k] * 100 / total);
-    const ORDER = ["verde", "azul", "amarillo", "rojo"];
+    const ORDER = ["verde", "amarillo", "rojo"].concat(cnt.gris ? ["gris"] : []);
 
     // Portada
     const cv = front();
@@ -1192,8 +1230,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     let ob = safe(S.meta.obra || "Obra"), obs = 40;
     while (obs > 18 && font.widthOfTextAtSize(ob, obs) > W - 2 * M - 40) obs -= 2;
     center(cv, fit(ob, obs, font, W - 2 * M), obs, font, 330, INK);
-    if (S.meta.plano) center(cv, S.meta.plano, 13, font, 304, INK);
-    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.length} salidas revisadas`, 11, fontR, S.meta.plano ? 282 : 300, GRAY);
+    if (S.meta.plano || S.meta.etapa) center(cv, [S.meta.plano, etapaTxt(S.meta.etapa)].filter(Boolean).join("   ·   "), 13, font, 304, INK);
+    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.filter(m => m.rev !== false).length === circ.length ? circ.length + " salidas revisadas" : circ.filter(m => m.rev !== false).length + " de " + circ.length + " salidas revisadas"}`, 11, fontR, S.meta.plano ? 282 : 300, GRAY);
     const bw = 460, bx = (W - bw) / 2, byy = 230;
     let xx = bx;
     for (const k of ORDER) { const w = bw * cnt[k] / total; if (w > 0) cv.drawRectangle({ x: xx, y: byy, width: w, height: 14, color: rgb(...ST[k].rgb) }); xx += w; }
@@ -1267,7 +1305,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         const nw = font.widthOfTextAtSize(`${m.n}`, 15) + 6;
         sp.drawText(fit(c.name, 9, font, tw - nw), { x: tx + nw, y: ty + 2, size: 9, font, color: rgb(...c.text) });
         ty -= 15;
-        if (m.retro) { sp.drawText(fit(`Retroceso · antes: ${ST[m.prev.st].tool}`, 8.5, font, tw), { x: tx, y: ty, size: 8.5, font, color: rgb(0.85, 0.19, 0.15) }); ty -= 12; }
+        if (m.retro) { sp.drawText(fit(`Retroceso: antes ${m.prev.st === "verde" ? "bien" : ST[m.prev.st].tool.toLowerCase()}${m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " (etapa " + m.prev.etapa + ")" : ""}`, 8.5, font, tw), { x: tx, y: ty, size: 8.5, font, color: rgb(0.85, 0.19, 0.15) }); ty -= 12; }
         const txt = [m.mot, m.resp ? "Resuelve: " + m.resp : "", m.nota].filter(Boolean).join(" · ") || "-";
         const ws = safe(txt).split(" "), ls = [""];
         for (const w of ws) { const t2 = ls[ls.length - 1] ? ls[ls.length - 1] + " " + w : w; if (fontR.widthOfTextAtSize(t2, 8.5) <= tw) ls[ls.length - 1] = t2; else ls.push(w); }
@@ -1317,7 +1355,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       return lines;
     };
-    const groups = ["rojo", "amarillo", "azul", "verde"].map(k => ({
+    const groups = ["rojo", "amarillo", "verde"].map(k => ({
       k, items: circ.filter(m => m.st === k && m.fotos && m.fotos.length).sort((a, b) => a.n - b.n).flatMap(m => m.fotos.map(f => ({ m, f })))
     })).filter(g => g.items.length);
     let fp = null, fy = 0;
@@ -1380,7 +1418,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const p of ours) {
       if (p !== cv) p.drawRectangle({ x: M, y: 36, width: W - 2 * M, height: 0.6, color: LINE });
       p.drawText("soporte@automaproyecto.com", { x: M, y: 22, size: 8.5, font, color: BLUE });
-      center(p, fit(`Recorrido de obra  ·  ${S.meta.obra || "Obra"}  ·  ${fmtFecha(S.meta.fecha)}`, 8, fontR, W - 2 * M - 260), 8, fontR, 22, GRAY);
+      center(p, fit(`Recorrido de obra  ·  ${S.meta.obra || "Obra"}  ·  ${etapaTxt(S.meta.etapa)}  ·  ${fmtFecha(S.meta.fecha)}`, 8, fontR, W - 2 * M - 260), 8, fontR, 22, GRAY);
       right(p, `Página ${all.indexOf(p) + 1} de ${N}`, 8, fontR, 22, GRAY);
     }
     await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
@@ -1405,7 +1443,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const HIST_MAX = 40;
   async function saveHist() {
     try {
-      const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+      const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
       S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
       await DB.histPut(S.meta.rid, { rid: S.meta.rid, meta: { ...S.meta }, marks: JSON.parse(JSON.stringify(S.marks)), bytes: S.bytes, counts: c, savedAt: Date.now() });
       const all = (await DB.histAll()).sort((a, b) => b.savedAt - a.savedAt);
@@ -1670,38 +1708,58 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       $("busy").textContent = "Cargando plano…";
     }
-    // ¿Hay un recorrido anterior de este plano? Se ofrece el más reciente: el de este iPad o el último guardado en Odoo (de cualquier técnico).
     const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
-    const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
-    // Siempre se pregunta cómo abrir el plano: seguir lo que quedó sin guardar en este equipo,
-    // partir del último recorrido guardado (de cualquier técnico) o empezar con el plano limpio.
-    const dr = await DB.get(dk(meta));
-    const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
-    let prev = null;
-    const local = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt)[0];
-    if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este equipo" };
-    const u = pl.ultimo;
-    if (u && u.url && (!prev || (u.fecha || "") > (prev.fecha || ""))) {
-      const r = await ultimoDeOdoo(pl, u, base);
-      if (r) prev = { ...r, fecha: u.fecha || r.fecha, tecnico: u.tecnico || r.tecnico, donde: "en Odoo" };
-    }
-    const limpio = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
     $("busy").hidden = true;
-    if (!prev && !draft) return limpio();
-    const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
-    sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2>
-      ${draft ? `<p class="note">Tienes un recorrido <b>sin guardar</b> de este plano en este equipo (${nDraft} círculo${nDraft === 1 ? "" : "s"}).</p>` : ""}
-      ${prev ? `<p class="note">Último recorrido guardado: <b>${prev.fecha ? fmtFecha(prev.fecha) : "sin fecha"}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}</b> (${prev.donde}).</p>` : ""}
-      <div class="stack">
-        ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
-        ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">Partir del último recorrido</button>` : ""}
-        <button type="button" class="btn" id="plClean">Plano limpio</button>
-      </div>`, () => {
-      $("plClean").onclick = limpio;
-      if (draft) $("plDraft").onclick = () => recuperar(dk(meta));
-      if (prev) $("plPrev").onclick = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false;
-        startSession(new Uint8Array(prev.bytes), (prev.fecha || "") < today() ? paraRevisar(migrate(prev.marks, 2), prev.fecha, prev.tecnico) : migrate(prev.marks, 2), { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: newId() }, 1, true); };
+    const hist = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt);
+    const ultimaDe = n => hist.find(h => (h.meta.etapa || 0) === n);
+    const estado = n => {
+      const h = ultimaDe(n); if (!h) return { txt: "Sin empezar", cls: "" };
+      const c = h.marks.filter(isCircle), bien = c.filter(m => m.st === "verde").length;
+      return bien === c.length && c.length ? { txt: `✓ ${bien}/${c.length} · ${fmtFecha(h.meta.fecha)}`, cls: "ok" } : { txt: `${bien}/${c.length} bien · ${fmtFecha(h.meta.fecha)}`, cls: "cur" };
+    };
+    sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2><p class="note">¿Qué etapa vas a recorrer?</p>
+      <div class="hlist">${ETAPAS.map(e => { const s2 = estado(e.n); return `<div class="hrow"><div class="hinfo"><b>${e.n} · ${esc(e.nombre)}</b><span class="${s2.cls === "ok" ? "c-verde" : ""}">${s2.txt}</span></div><button type="button" class="btn${s2.cls === "cur" ? " primary" : ""}" data-et="${e.n}">Abrir</button></div>`; }).join("")}</div>`, () => {
+      $("sheetHost").querySelectorAll("[data-et]").forEach(btn => btn.onclick = () => abrirEtapa(+btn.dataset.et));
     });
+    const abrirEtapa = async n => {
+      closeSheet();
+      const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta, etapa: n };
+      const dr = await DB.get(dk(meta));
+      const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
+      // Misma etapa: se sigue en su plano. Si no hay, se parte de la etapa anterior más reciente (o del último recorrido en Odoo).
+      let prev = null; const same = ultimaDe(n);
+      if (same) prev = { bytes: same.bytes, marks: same.marks, fecha: same.meta.fecha, tecnico: same.meta.tecnico, obra: same.meta.obra, etapa: n, donde: etapaTxt(n) };
+      else {
+        const low = hist.filter(h => (h.meta.etapa || 0) < n && h.meta.etapa).sort((a, b) => b.meta.etapa - a.meta.etapa || b.savedAt - a.savedAt)[0];
+        if (low) prev = { bytes: low.bytes, marks: low.marks, fecha: low.meta.fecha, tecnico: low.meta.tecnico, obra: low.meta.obra, etapa: low.meta.etapa, donde: etapaTxt(low.meta.etapa) };
+        else if (pl.ultimo && pl.ultimo.url) {
+          const r = await ultimoDeOdoo(pl, pl.ultimo, base); $("busy").hidden = true;
+          if (r) prev = { ...r, fecha: pl.ultimo.fecha || r.fecha, tecnico: pl.ultimo.tecnico || r.tecnico, etapa: 0, donde: "último recorrido en Odoo" };
+        }
+      }
+      const limpio = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
+      if (!prev && !draft) return limpio();
+      const partir = async () => {
+        closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false;
+        const ms = JSON.parse(JSON.stringify(migrate(prev.marks, 2)));
+        const otroDia = (prev.fecha || "") < today();
+        startSession(new Uint8Array(prev.bytes), prev.etapa !== n || otroDia ? paraRevisar(ms, prev.fecha, prev.tecnico, prev.etapa, n) : ms,
+          { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: prev.etapa === n && !otroDia ? (same && same.meta.rid) || newId() : newId() }, 1, true);
+      };
+      const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
+      sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${esc(it.obra)} · ${esc(pl.tipo)}</p>
+        ${draft ? `<p class="note">Tienes esta etapa <b>sin guardar</b> en este equipo (${nDraft} salida${nDraft === 1 ? "" : "s"}).</p>` : ""}
+        ${prev ? `<p class="note">${prev.etapa === n ? "Último recorrido de esta etapa" : "Se parte de"}: <b>${esc(prev.donde)}</b> · ${prev.fecha ? fmtFecha(prev.fecha) : ""}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}${prev.etapa !== n ? ". Las salidas salen en gris para que las revises en esta etapa." : ""}</p>` : ""}
+        <div class="stack">
+          ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
+          ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">${prev.etapa === n ? "Seguir con esta etapa" : "Empezar con esas salidas"}</button>` : ""}
+          <button type="button" class="btn" id="plClean">Plano limpio</button>
+        </div>`, () => {
+        $("plClean").onclick = limpio;
+        if (draft) $("plDraft").onclick = () => recuperar(dk(meta));
+        if (prev) $("plPrev").onclick = partir;
+      });
+    };
   }
   // Baja (o toma del iPad si no hay señal) el último recorrido de un plano guardado en Odoo y saca el plano con sus marcas.
   async function ultimoDeOdoo(pl, u, base) {
@@ -1777,7 +1835,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     toast("PRUEBA: no se subió a Odoo. Se descargó el PDF.");
   }
   async function queueOdooReal(file) {
-    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
     const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, ...detalles(), archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
     await DB.outPut(S.meta.rid, { body, obra: S.meta.obra, fecha: S.meta.fecha, at: Date.now() });
