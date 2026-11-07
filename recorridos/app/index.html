@@ -240,7 +240,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .h-head{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
 .h-body{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
 .h-bar{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
-.h-tabla{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.h-tabla{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+.h-toggle{width:100%;display:flex;align-items:center;gap:12px;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:12px 16px;color:var(--ink);text-align:left;min-height:62px}
+.h-toggle:active{background:#40444B}
+.h-toggle[aria-expanded="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.h-tg-i{width:38px;height:38px;border-radius:10px;background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.h-tg-i svg{width:20px;height:20px}
+.h-tg-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.h-tg-t b{font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.h-tg-t small{font-size:12.5px;color:var(--muted);margin-top:2px}
+.h-tg-f{color:var(--accent);font-size:26px;font-weight:800;line-height:1;transition:transform .15s}
+.h-toggle[aria-expanded="true"] .h-tg-f{transform:rotate(90deg)}
 .h-th,.h-tr{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1.3fr) 110px;gap:12px;align-items:center;padding:0 16px}
 .h-th{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;padding-top:10px;padding-bottom:8px;background:var(--bg);border-bottom:1px solid var(--line)}
 .h-tr{width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--row);color:var(--ink);min-height:58px;padding-top:9px;padding-bottom:9px;font:inherit}
@@ -380,7 +390,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 60;
+  const APP_VERSION = 61;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1638,11 +1648,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (oh) {
       obras.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || b.pend - a.pend);
       oh.hidden = !obras.length;
-      oh.innerHTML = `<div class="h-sec"><span>Obras</span><em>${obras.length}</em></div><div class="h-tabla"><div class="h-th"><span>Obra</span><span>Etapa</span><span>Estado</span><span>Último</span></div>` +
+      const abierto = oh.dataset.abierto === "1";
+      oh.innerHTML = `<button type="button" class="h-toggle" id="obrasTgl" aria-expanded="${abierto}"><span class="h-tg-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span><span class="h-tg-t"><b>Obras</b><small>${obras.length} obra${obras.length === 1 ? "" : "s"} · ${obras.filter(o => o.pend).length} con pendientes</small></span><span class="h-tg-f">›</span></button><div class="h-tabla"${abierto ? "" : " hidden"}><div class="h-th"><span>Obra</span><span>Etapa</span><span>Estado</span><span>Último</span></div>` +
         obras.map((o, i) => `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.it.cliente_nombre || o.it.obra)}${o.it.concepto ? " · " + esc(o.it.concepto) : ""}</b><small>${esc(o.it.obra)} · ${esc(o.it.orden || "")}</small></span>` +
           `<span class="h-et"><i>${o.et}</i><span class="nl">${esc(etapaDe(o.et) ? etapaDe(o.et).nombre : "")}</span><span class="nc">${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][o.et] || ""}</span></span>` +
           `<span class="h-st ${o.pend ? "p" : "k"}"><i></i>${o.pend ? o.pend + " plano" + (o.pend > 1 ? "s" : "") + " pendiente" + (o.pend > 1 ? "s" : "") : "Al día"}</span>` +
           `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`).join("") + `</div>`;
+      $("obrasTgl").onclick = () => { const a = oh.dataset.abierto !== "1"; oh.dataset.abierto = a ? "1" : ""; oh.querySelector(".h-tabla").hidden = !a; $("obrasTgl").setAttribute("aria-expanded", a); };
       oh.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const base = planosBase(); if (base) elegirPlano(obras[+x.dataset.o].it, base); });
     }
     box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
