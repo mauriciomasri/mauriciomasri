@@ -151,12 +151,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .hrow.et-pend .hinfo span{color:var(--rojo)}
 .resumen{display:flex;flex-direction:column;gap:8px}
 .resumen h2{font-family:var(--f-label);font-size:21px;margin:8px 0 0}
-.resumen .rob{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel);display:flex;flex-direction:column;gap:4px;text-align:left;font:inherit;color:inherit;cursor:pointer}
-.resumen .rob b{font-family:var(--f-label);font-size:17px}
-.resumen .rob .pl{display:flex;gap:8px;align-items:baseline;font-size:14px;flex-wrap:wrap}
-.resumen .rob .pl i{font-style:normal;font-weight:600}
-.resumen .rob.ok{border-color:var(--verde)}
-.resumen .rob.pend{border-color:color-mix(in srgb,var(--rojo) 55%,var(--line))}
+.etgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.etn{border:1.5px solid color-mix(in srgb,var(--rojo) 55%,var(--line));background:color-mix(in srgb,var(--rojo) 7%,var(--panel));border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;color:var(--ink);cursor:pointer;min-width:0}
+.etn b{font-family:var(--f-label);font-size:28px;line-height:1;color:var(--rojo);font-variant-numeric:tabular-nums}
+.etn span{font-size:11px;line-height:1.15;text-align:center;color:var(--muted)}
+.etn.cero{border-color:var(--line);background:var(--panel)}
+.etn.cero b{color:var(--verde)}
 .hinfo{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
 .hinfo b{font-family:var(--f-label);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hinfo span{font-size:13px;color:var(--muted)}
@@ -1473,31 +1473,32 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       paintHistBtn();
     } catch (e) {}
   }
-  // Resumen en la pantalla de inicio: qué le falta a cada obra (etapa en la que va y sus pendientes).
+  // Resumen en el inicio: un número por etapa = cuántas obras tienen trabajo pendiente en esa etapa.
+  // Cada plano cuenta en una sola etapa: la que está en curso con pendientes, o la siguiente si ya terminó.
   async function pintarResumen() {
     const box = $("resumen"); if (!box) return;
     let lista = null; try { lista = JSON.parse(localStorage.getItem("automa-cat") || "null"); } catch (e) {}
     if (!lista || !lista.length) { box.hidden = true; return; }
     const hist = (await DB.histAll()).sort((a, b) => b.savedAt - a.savedAt);
-    const filas = [];
+    const por = {}; ETAPAS.forEach(e => por[e.n] = []);
     for (const it of lista) for (const pl of (it.planos || [])) {
       const hs = hist.filter(h => h.meta.plano_id === pl.id && h.meta.etapa);
       const et = hs.length ? Math.max(...hs.map(h => h.meta.etapa)) : 0;
       const h = et ? hs.find(x => x.meta.etapa === et) : null;
       const e = h ? estadoRec(h) : null;
-      let txt, cls, orden;
-      if (!h) { txt = "Sin recorridos por etapa"; cls = ""; orden = 2; }
-      else if (e.ok) { const sig = etapaDe(et + 1); txt = `✓ ${etapaTxt(et)} terminada${sig ? ` · sigue: ${sig.nombre}` : " · obra terminada"}`; cls = "ok"; orden = sig ? 1 : 3; }
-      else { txt = `${etapaTxt(et)} · ${e.txt}`; cls = "pend"; orden = 0; }
-      filas.push({ it, pl, txt, cls, orden, fecha: h ? h.meta.fecha : "", pend: e ? e.pend : 0 });
+      if (!h) por[1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: "" });
+      else if (!e.ok) por[et].push({ it, pl, txt: e.txt, pend: e.pend, fecha: h.meta.fecha });
+      else if (etapaDe(et + 1)) por[et + 1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: h.meta.fecha });
     }
-    filas.sort((a, b) => a.orden - b.orden || b.pend - a.pend || (b.fecha || "").localeCompare(a.fecha || ""));
     box.hidden = false;
-    box.innerHTML = `<h2>Qué le falta a cada obra</h2>` + filas.map((f, i) => `<button type="button" class="rob ${f.cls}" data-i="${i}">
-        <b>${esc(f.it.cliente_nombre || f.it.obra)}${f.it.concepto ? " · " + esc(f.it.concepto) : ""}</b>
-        <span class="pl"><i>${esc(f.pl.tipo)}</i><span class="${f.cls === "ok" ? "c-verde" : f.cls === "pend" ? "c-rojo" : "c-porrev"}">${esc(f.txt)}</span>${f.fecha ? `<span class="c-porrev">${fmtFecha(f.fecha)}</span>` : ""}</span>
-      </button>`).join("");
-    box.querySelectorAll(".rob").forEach(b => b.onclick = () => { const f = filas[+b.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
+    box.innerHTML = `<h2>Obras pendientes por etapa</h2><div class="etgrid">` + ETAPAS.map(e => `<button type="button" class="etn${por[e.n].length ? "" : " cero"}" data-n="${e.n}"><b>${por[e.n].length}</b><span>${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][e.n]}</span></button>`).join("") + `</div>`;
+    box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
+      const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
+      sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${filas.length ? `${filas.length} obra${filas.length > 1 ? "s" : ""} pendiente${filas.length > 1 ? "s" : ""}` : "No hay obras pendientes en esta etapa."}</p>
+        <div class="hlist">${filas.map((f, i) => `<div class="hrow et-pend"><div class="hinfo"><b>${esc(f.it.cliente_nombre || f.it.obra)}${f.it.concepto ? " · " + esc(f.it.concepto) : ""}</b><span>${esc(f.pl.tipo)} · ${esc(f.txt)}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => {
+        $("sheetHost").querySelectorAll("[data-i]").forEach(x => x.onclick = () => { const f = filas[+x.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
+      });
+    });
   }
   async function paintHistBtn() {
     pintarResumen();
