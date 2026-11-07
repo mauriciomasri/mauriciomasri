@@ -21,7 +21,7 @@
 *{-webkit-tap-highlight-color:transparent}
 body{margin:0;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 /* Layout: one-screen tool — header strip, plan viewport, fixed tool tray at the thumb */
-:root{
+:root{--gris:#9aa3ad;
   --bg:#eef1f4; --panel:#ffffff; --ink:#16202b; --muted:#5b6876; --line:#d3dae2;
   --accent:#1f4e79; --accent-ink:#ffffff; --plan:#e3e8ee;
   --rojo:#d93025; --amarillo:#e8a800; --amarillo-ink:#8a6400; --azul:#1565c0; --verde:#1e9e48;
@@ -49,6 +49,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .counts{display:flex;gap:6px;font-family:var(--f-label);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
 .counts span{display:flex;align-items:center;gap:4px}
 .dot{width:12px;height:12px;border-radius:50%;border:2.5px solid currentColor;display:inline-block}
+.c-porrev{color:var(--muted)}
+.c-gris{color:#8a96a3}
 .c-negro{color:var(--ink)}.c-rojo{color:var(--rojo)}.c-amarillo{color:var(--amarillo)}.c-azul{color:var(--azul)}.c-verde{color:var(--verde)}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;font-weight:600}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -68,8 +70,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--plan) 70%,transparent);font-family:var(--f-label);font-size:18px;font-weight:600}
 
 /* empty state */
-.empty{position:absolute;inset:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px 16px}
-.empty .card{max-width:440px;display:flex;flex-direction:column;gap:16px}
+.empty{position:absolute;inset:0;overflow:auto;display:flex;justify-content:center;padding:24px 16px}
+.empty .card{max-width:440px;width:100%;margin:auto;display:flex;flex-direction:column;gap:16px}
 .empty .brand{width:min(260px,70%);height:auto;align-self:center;margin-bottom:8px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .empty .brand{filter:invert(1) hue-rotate(180deg)}}
 :root[data-theme="dark"] .empty .brand{filter:invert(1) hue-rotate(180deg)}
@@ -99,12 +101,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sheet .buscar{position:sticky;top:-18px;z-index:2;background:var(--panel);padding:6px 0;margin:-6px 0}
 .visor{position:fixed;inset:0;z-index:30;background:#000;display:flex;flex-direction:column}
 .visor .vtop{display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px);color:#fff;font-weight:600}
-.visor .vtop span{flex:1}
+.visor .vtop span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .visor .vtop button{border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-size:15px;font-weight:600;padding:8px 14px}
-.visor .vimg{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;touch-action:pan-x pan-y pinch-zoom}
+.visor .vimg{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+.visor .vhint{color:#9aa8b6;text-align:center;font-size:13px;margin:6px 0 calc(10px + env(safe-area-inset-bottom,0px))}
 .visor .vimg img{max-width:100%;max-height:100%;object-fit:contain}
-.visor .vimg.zoom{display:block}
-.visor .vimg.zoom img{max-width:none;max-height:none;width:250%}
+.visor .vimg img{transform-origin:center;will-change:transform;user-select:none;-webkit-user-drag:none}
 .stc{display:flex;flex-wrap:wrap;gap:6px}
 .stc button{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--ink)}
 .stc button[aria-pressed="true"]{border-color:currentColor;background:var(--panel)}
@@ -142,6 +144,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .pendpill{border:0;border-radius:999px;background:#e8a800;color:#16202b;font-family:var(--f-label);font-weight:700;font-size:14px;padding:6px 10px}
 .hlist{display:flex;flex-direction:column;gap:8px}
 .hrow{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.hrow.et-ok{border-color:var(--verde);background:color-mix(in srgb,var(--verde) 9%,var(--panel))}
+.hrow.et-ok .hinfo span{color:var(--verde);font-weight:600}
+.hrow.et-pend{border-color:color-mix(in srgb,var(--rojo) 55%,var(--line));background:color-mix(in srgb,var(--rojo) 6%,var(--panel))}
+.hrow.et-pend .hinfo span{color:var(--rojo)}
+.resumen{display:flex;flex-direction:column;gap:8px}
+.resumen h2{font-family:var(--f-label);font-size:21px;margin:8px 0 0}
+.etgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.etn{border:1.5px solid color-mix(in srgb,var(--rojo) 55%,var(--line));background:color-mix(in srgb,var(--rojo) 7%,var(--panel));border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;color:var(--ink);cursor:pointer;min-width:0}
+.etn b{font-family:var(--f-label);font-size:28px;line-height:1;color:var(--rojo);font-variant-numeric:tabular-nums}
+.etn span{font-size:11px;line-height:1.15;text-align:center;color:var(--muted)}
+.etn.cero{border-color:var(--line);background:var(--panel)}
+.etn.cero b{color:var(--verde)}
 .hinfo{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
 .hinfo b{font-family:var(--f-label);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hinfo span{font-size:13px;color:var(--muted)}
@@ -172,8 +186,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="counts" id="counts" hidden>
       <span class="c-rojo"><i class="dot"></i><b id="nR">0</b></span>
       <span class="c-amarillo"><i class="dot"></i><b id="nA">0</b></span>
-      <span class="c-azul"><i class="dot"></i><b id="nZ">0</b></span>
+      <span class="c-azul" hidden><i class="dot"></i><b id="nZ">0</b></span>
       <span class="c-verde"><i class="dot"></i><b id="nV">0</b></span>
+      <span class="c-porrev" id="nPx" hidden><i class="dot" style="border-style:dashed"></i><b id="nP">0</b></span>
     </div>
     <button class="pendpill" id="pendPill" type="button" hidden></button>
     <button class="btn undo" id="undoBtn" type="button" hidden disabled aria-label="Deshacer"><span class="ui">↶</span><span class="ut">Deshacer</span></button>
@@ -187,10 +202,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <h1>Marca el avance sobre el plano</h1>
         <ol class="steps">
           <li style="display:contents"><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
-          <li style="display:contents"><b>2</b><span>Elige <strong class="c-rojo">rojo</strong>, <strong style="color:var(--amarillo-ink)">amarillo</strong>, <strong class="c-azul">azul</strong> o <strong class="c-verde">verde</strong> y toca cada salida para encerrarla.</span></li>
+          <li style="display:contents"><b>2</b><span>Elige la etapa y marca cada salida: <strong class="c-verde">bien</strong>, <strong style="color:var(--amarillo-ink)">detalle</strong> o <strong class="c-rojo">mal</strong>.</span></li>
           <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
         </ol>
-        <p>Para corregir un recorrido o hacer el siguiente, abre el plano en <b>Planos de obras</b> y elige <b>Partir del último recorrido</b>.</p>
+
         <div class="actions">
           <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
           <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
@@ -199,6 +214,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
         </div>
+        <div class="resumen" id="resumen" hidden></div>
         <div class="install" id="installHint" hidden>
           <b>Instálala para usarla sin internet</b>
           <span id="installTxt"></span>
@@ -234,10 +250,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   </main>
 
   <nav class="tray" id="tray" hidden>
-    <button class="tool t-rojo" data-tool="rojo" aria-pressed="true" type="button"><i class="ring"></i>Falta tubo</button>
+    <button class="tool t-rojo" data-tool="rojo" aria-pressed="false" type="button"><i class="ring"></i>Mal</button>
     <button class="tool t-amarillo" data-tool="amarillo" aria-pressed="false" type="button"><i class="ring"></i>Detalle</button>
-    <button class="tool t-azul" data-tool="azul" aria-pressed="false" type="button"><i class="ring"></i>Cableado</button>
-    <button class="tool t-verde" data-tool="verde" aria-pressed="false" type="button"><i class="ring"></i>Terminado</button>
+    
+    <button class="tool t-verde" data-tool="verde" aria-pressed="true" type="button"><i class="ring"></i>Bien</button>
     <button class="tool t-texto" data-tool="dibujo" aria-pressed="false" type="button"><span class="ico">✏️</span>Dibujar</button>
     <button class="tool t-mano" data-tool="mano" aria-pressed="false" type="button"><span class="ico">✋</span>Mover</button>
     <button class="tool t-borrar" data-tool="borrar" aria-pressed="false" type="button"><span class="ico">⌫</span>Borrar</button>
@@ -252,16 +268,69 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 55;
+  const APP_VERSION = 59;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
+  // Recorridos por etapas: cada etapa es su propio plano, con 3 colores (bien, detalle, mal).
+  // "gris" = salida que viene de la etapa anterior y todavía no se revisa en esta.
   const ST = {
-    rojo:     { name: "Falta tubería",     tool: "Falta tubo", rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
-    amarillo: { name: "Detalle pendiente", tool: "Detalle",    rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
-    azul:     { name: "Tubería y cableado OK", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
-    verde:    { name: "Terminado con equipo",  tool: "Terminado", rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+    rojo:     { name: "Mal",     tool: "Mal",     rgb: [0.85, 0.19, 0.15], text: [0.80, 0.12, 0.10] },
+    amarillo: { name: "Detalle", tool: "Detalle", rgb: [0.91, 0.66, 0.00], text: [0.62, 0.45, 0.00] },
+    azul:     { name: "Cableado", tool: "Cableado", rgb: [0.08, 0.40, 0.75], text: [0.06, 0.32, 0.64] },
+    verde:    { name: "Bien",    tool: "Bien",    rgb: [0.12, 0.62, 0.28], text: [0.08, 0.50, 0.20] },
+    gris:     { name: "Por revisar", tool: "Por revisar", rgb: [0.60, 0.64, 0.69], text: [0.42, 0.46, 0.50] },
   };
+  const COLORES = ["verde", "amarillo", "rojo"];
+  const ETAPAS = [
+    { n: 1, nombre: "Tuberías con rafia", bien: "Tubería con rafia OK",
+      detalle: ["Falta rafia", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos"],
+      mal: ["Falta tubería", "Falta caja", "Tubería tapada"] },
+    { n: 2, nombre: "Cableado", bien: "Cableado OK",
+      detalle: ["Falta bajada de cable", "Sacar cable", "Definir ubicación"],
+      mal: ["Falta cablear", "No pasa el cable"] },
+    { n: 3, nombre: "Ubicaciones y bajadas", bien: "Ubicación y bajada OK",
+      detalle: ["Ubicación ligeramente mal", "Falta bajada", "Sacar cable", "Sacar contacto"],
+      mal: ["Ubicación mal", "Cable ahogado", "Cable en plafón"] },
+    { n: 4, nombre: "Supervisión para instalación", bien: "Listo para instalar",
+      detalle: ["Falta resane", "Falta chalupa", "Falta acabado", "Falta pintura"],
+      mal: ["No está listo", "Cable ahogado", "Cable en plafón"] },
+    { n: 5, nombre: "Instalación de equipo", bien: "Instalado",
+      detalle: ["Falta pieza", "Falta placa", "Instalado provisional"],
+      mal: ["No se pudo instalar", "Equipo dañado", "Falta equipo"] },
+  ];
+  const etapaDe = n => ETAPAS.find(e => e.n === +n) || null;
+  function recsPlano(pl, histAll) {
+    const out = {};
+    for (const e of ETAPAS) {
+      const loc = histAll.filter(h => h.meta.plano_id === pl.id && h.meta.etapa === e.n).sort((a, b) => b.savedAt - a.savedAt)[0];
+      const od = pl.etapas && pl.etapas[e.n];
+      if (od && (!loc || (od.fecha || "") > (loc.meta.fecha || ""))) out[e.n] = { odoo: od, meta: { fecha: od.fecha, tecnico: od.tecnico, etapa: e.n }, cnt: od };
+      else if (loc) out[e.n] = loc;
+    }
+    return out;
+  }
+  // Cómo quedó un recorrido guardado: terminado si todas sus salidas están bien y revisadas.
+  function estadoRec(h) {
+    if (h.cnt) return estadoCnt(h.cnt);
+    const c = h.marks.filter(isCircle);
+    return estadoCnt({ total: c.length, mal: c.filter(m => m.st === "rojo").length, det: c.filter(m => m.st === "amarillo").length,
+      sinrev: c.filter(m => m.rev === false || m.st === "gris").length, bien: c.filter(m => m.st === "verde" && m.rev !== false).length });
+  }
+  function estadoCnt(k) {
+    const total = k.total || 0, mal = k.mal || 0, det = k.det || 0, sinRev = k.sinrev || 0, bien = k.bien || 0;
+    const pend = mal + det + sinRev;
+    const partes = [mal && `${mal} mal`, det && `${det} detalle`, sinRev && `${sinRev} sin revisar`].filter(Boolean);
+    return { total, bien, pend, ok: total > 0 && pend === 0, txt: partes.join(" · ") };
+  }
+  const etapaTxt = n => { const e = etapaDe(n); return e ? `Etapa ${e.n}: ${e.nombre}` : ""; };
+  function usarEtapa(n) {
+    const e = etapaDe(n); if (!e) return;
+    ST.verde.name = e.bien; ST.amarillo.name = "Detalle"; ST.rojo.name = "Mal";
+    OPC.verde = [];
+    OPC.amarillo = [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: e.detalle.concat("Otro"), multi: true }];
+    OPC.rojo = [{ k: "mot", lbl: "¿Qué está mal? (puedes elegir varias)", opts: e.mal.concat("Otro"), multi: true }];
+  }
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Sacar cable", "Sacar contacto", "Definir ubicación", "Otro"];
   const RESP = ["Automa", "Obra"];
   // Técnicos sugeridos: se pueden elegir varios (o escribir otro nombre).
@@ -270,7 +339,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   try { const t = JSON.parse(localStorage.getItem("automa-tecnicos") || "null"); if (Array.isArray(t)) TECNICOS = t; } catch (e) {}
   window.__automaTecnicos = l => { if (!Array.isArray(l)) return; TECNICOS = l.map(String); try { localStorage.setItem("automa-tecnicos", JSON.stringify(TECNICOS)); } catch (e) {} };
   // Opciones rápidas de cada color (se guardan en mot y resp, igual que el amarillo).
-  const OPC = {
+  let OPC = {
     rojo:     [{ k: "mot", lbl: "¿Qué falta?", opts: ["Falta tubería", "Falta caja", "Falta bajada", "Tubería tapada", "Falta llegar al registro/centro de carga", "Otro"] },
                { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
     amarillo: [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: MOTIVOS, multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }],
@@ -289,7 +358,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   const S = {
     bytes: null, doc: null, page: 1, pages: 0, zoom: 1, fitZoom: 1,
-    tool: "rojo", drawMode: "flecha", marks: [], nextN: 1, undo: [],
+    tool: "verde", drawMode: "flecha", marks: [], nextN: 1, undo: [],
     meta: { obra: "", tecnico: "", fecha: today() },
   };
   let pageObj = null, viewport = null, renderTask = null;
@@ -332,7 +401,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     async del(k = "draft") { try { const db = await this.open(); await new Promise(res => { const t = db.transaction("d", "readwrite"); t.objectStore("d").delete(k); t.oncomplete = res; t.onerror = res; }); } catch (e) {} },
   };
   let draftT = 0;
-  const dk = m => "draft-" + ((m && m.plano_id) || "demo");
+  const dk = m => "draft-" + ((m && m.plano_id) || "demo") + "-e" + ((m && m.etapa) || 0);
   const draftData = () => ({ v: 2, bytes: S.bytes, marks: S.marks, nextN: S.nextN, meta: S.meta, page: S.page });
   // Si quedó algo sin guardar de este plano, se abre tal cual (sin preguntar) y sigue marcado como pendiente de guardar.
   async function recuperar(k) {
@@ -396,6 +465,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   async function startSession(bytes, marks, meta, page, askMeta, prev) {
     S.bytes = bytes; S.marks = marks; S.meta = meta; S.undo = [];
+    usarEtapa(S.meta.etapa || 1); if (!S.meta.etapa) S.meta.etapa = 1;
     if (!S.meta.rid) S.meta.rid = newId();
     renumber();
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
@@ -454,15 +524,31 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         continue;
       }
       const r = Math.max(6, rpt * k), c = `var(--${m.st})`;
-      const fs = Math.max(8, rpt * 0.7 * k);
-      out.push(`<g data-id="${m.id}"><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="${Math.max(2, rpt * 0.22 * k)}"/>` +
-        `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n}${label(m) ? " · " + esc(label(m)) : ""}</text>${m.fotos && m.fotos.length ? camBadge(x, y - r - Math.max(4, r * 0.3) - 1.5, Math.max(4, r * 0.3), m.fotos.length) : ""}</g>`);
+      const fs = Math.max(8, rpt * 0.7 * k), pend = m.rev === false, sw = Math.max(2, rpt * 0.22 * k);
+      // Por revisar: punteado y tenue hasta que el técnico lo confirme o lo cambie.
+      out.push(`<g data-id="${m.id}"${pend ? ' opacity="0.5"' : ""}><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="${sw}"${pend ? ` stroke-dasharray="${sw * 1.6} ${sw * 1.3}"` : ""}/>` +
+        (m.retro ? `<circle cx="${x - r * 0.95}" cy="${y - r * 0.95}" r="${Math.max(7, r * 0.5)}" fill="#d93025" stroke="#fff" stroke-width="1.5"/><text x="${x - r * 0.95}" y="${y - r * 0.95 + Math.max(7, r * 0.5) * 0.45}" text-anchor="middle" font-family="Barlow, sans-serif" font-weight="700" font-size="${Math.max(9, r * 0.75)}" fill="#fff">↓</text>` : "") +
+        `<text x="${x + r + 3}" y="${y + fs * 0.35}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="600" font-size="${fs}" fill="${m.st === "amarillo" ? "#9e7300" : c}" stroke="#fff" stroke-width="${fs * 0.22}" paint-order="stroke">${m.n}${label(m) ? " · " + esc(label(m)) : ""}</text>${m.fotos && m.fotos.length ? camBadge(...camPos(x, y, r), m.fotos.length) : ""}</g>`);
     }
     $("ov").innerHTML = out.join("");
-    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
     $("nR").textContent = c.rojo; $("nA").textContent = c.amarillo; $("nZ").textContent = c.azul; $("nV").textContent = c.verde;
+    const np = S.marks.filter(m => isCircle(m) && m.rev === false).length; $("nPx").hidden = !np; $("nP").textContent = np; $("nPx").title = `${np} por revisar`;
     $("undoBtn").disabled = !S.undo.length;
+  }
+  // Camarita del círculo: es un botón; al tocarla se ve la foto en grande sin abrir la ventana del círculo.
+  const camPos = (x, y, r) => { const b = Math.max(10, r * 0.6); return [x + r + b * 0.55, y - r - b * 0.55, b]; };
+  function camHit(px, py) {
+    const k = viewport.scale, rpt = radiusFor(pageObj.getViewport({ scale: 1 }));
+    let best = null, bd = Infinity;
+    for (const m of S.marks) {
+      if (m.page !== S.page || !isCircle(m) || !(m.fotos && m.fotos.length)) continue;
+      const [x, y] = viewport.convertToViewportPoint(m.x, m.y), [cx, cy, b] = camPos(x, y, Math.max(6, rpt * k));
+      const d = Math.hypot(px - cx, py - cy);
+      if (d < Math.max(b + 6, 16) && d < Math.hypot(px - x, py - y) && d < bd) { best = m; bd = d; }
+    }
+    return best;
   }
   function camBadge(cx, cy, b, n) {
     return `<g aria-label="${n} foto${n > 1 ? "s" : ""}"><circle cx="${cx}" cy="${cy}" r="${b}" fill="#2b3440" stroke="#fff" stroke-width="${b * 0.12}"/>` +
@@ -483,7 +569,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   function refreshHeader() {
     $("obraLbl").textContent = (S.meta.obra || "Obra sin nombre") + (S.meta.plano ? " · " + S.meta.plano.split(" - ")[0] : "");
-    $("metaLbl").textContent = `${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
+    $("metaLbl").textContent = `${S.meta.etapa ? etapaTxt(S.meta.etapa) + " · " : ""}${fmtFecha(S.meta.fecha)} · ${S.meta.tecnico || "Toca para poner tu nombre"}`;
   }
 
   /* ---------- editing ---------- */
@@ -565,15 +651,40 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         continue;
       }
       const d = Math.hypot(px - x, py - y);
-      if (d < Math.max(rpt * k + 6, 18) && d < bd) { best = m; bd = d; }
+      if (d < Math.max(rpt * k * 1.9, 30) && d < bd) { best = m; bd = d; }
     }
     return best;
   }
+  // Revalidar: las salidas que vienen del recorrido anterior empiezan "por revisar".
+  // Un toque = sigue igual (queda confirmada). Otro toque abre su ventana para cambiarla.
+  const RANK = { rojo: 0, amarillo: 1, azul: 2, verde: 3 };
+  const porRevisar = () => S.marks.filter(m => isCircle(m) && m.rev === false);
+  function confirmar(m) {
+    snapshot(); m.rev = true; changed();
+    const n = porRevisar().length;
+    toast(`Salida ${m.n}: sigue igual${n ? ` · faltan ${n}` : " · ya revisaste todas"}`, "Cambiar", () => openMarkSheet(m, false));
+  }
+  function paraRevisar(marks, fecha, tecnico, etapaPrev, etapaNueva) {
+    const cambia = etapaPrev !== etapaNueva;
+    const bienPrev = etapaDe(etapaPrev) ? etapaDe(etapaPrev).bien : "";
+    marks.forEach(m => {
+      if (!isCircle(m)) return;
+      m.prev = { st: m.st, mot: m.mot || "", resp: m.resp || "", nota: m.nota || "", fotos: cambia ? 0 : (m.fotos || []).length, fecha: fecha || "", tecnico: tecnico || "", etapa: etapaPrev || 0, bien: bienPrev };
+      if (cambia) { m.st = "gris"; m.mot = ""; m.resp = ""; m.nota = ""; m.fotos = []; }
+      m.rev = false; delete m.retro; delete m.nueva;
+    });
+    return marks;
+  }
   function onTap(px, py) {
     clearTimeout(quickT); $("quickFoto").hidden = true;
+    if (S.tool !== "dibujo" && S.tool !== "borrar") { const fm = camHit(px, py); if (fm) { verFoto(fm.fotos, 0, `Salida ${fm.n}${label(fm) ? " · " + label(fm) : ""}`); return; } }
     const colorTool = S.tool in ST;
     const hit = hitTest(px, py, colorTool ? "circle" : "any");
     const textTool = S.tool === "dibujo" && S.drawMode === "texto";
+    if (hit && isCircle(hit) && hit.rev === false && S.tool !== "borrar" && S.tool !== "dibujo") {
+      if (hit.st === "gris") { openMarkSheet(hit, false, COLORES.includes(S.tool) ? S.tool : "verde"); return; }
+      confirmar(hit); return;
+    }
     if (S.tool === "mano" || (textTool && hit && isTxt(hit))) { if (hit && !isDraw(hit)) (isTxt(hit) ? openTextSheet(hit, null) : openMarkSheet(hit, false)); return; }
     if (textTool) { const [x, y] = viewport.convertToPdfPoint(px, py); openTextSheet(null, { x, y }); return; }
     if (S.tool === "dibujo") return;
@@ -593,7 +704,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (hit) { openMarkSheet(hit, false, hit.st === S.tool ? null : S.tool); return; }
     const [x, y] = viewport.convertToPdfPoint(px, py);
     snapshot();
-    const m = { id: Math.random().toString(36).slice(2, 9), n: S.nextN++, page: S.page, x, y, st: S.tool, mot: "", resp: "", nota: "" };
+    const m = { id: Math.random().toString(36).slice(2, 9), n: S.nextN++, page: S.page, x, y, st: S.tool, mot: "", resp: "", nota: "", nueva: true };
     S.marks.push(m); changed();
     openMarkSheet(m, true);
   }
@@ -848,16 +959,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     });
   }
   function openMarkSheet(m, fresh, toSt) {
-    let st = toSt || m.st;
+    let st = toSt || (m.st === "gris" ? "verde" : m.st);
     const draft = { mot: st === m.st ? m.mot : "", resp: st === m.st ? m.resp : "" };
     const opcHtml = () => (OPC[st] || []).map(o => `<div class="field"><label class="lbl">${o.lbl}</label>${chips(o.k, o.opts, draft[o.k], o.multi)}</div>`).join("");
     sheet(`
       <h2>Salida ${m.n}</h2>
-      <div class="field"><label class="lbl">Color</label><div class="stc" id="stc">${Object.keys(ST).map(k => `<button type="button" class="c-${k}" data-st="${k}" aria-pressed="${k === st}"><i class="dot"></i>${ST[k].tool}</button>`).join("")}</div>
-        <p class="note" id="stCambio"${st === m.st || fresh ? " hidden" : ""}>Cambia de <b class="c-${m.st}">${ST[m.st].tool}</b> a <b id="stNuevo"></b> al picar Listo.</p></div>
+      <div class="field"><label class="lbl">Color</label><div class="stc" id="stc">${COLORES.map(k => `<button type="button" class="c-${k}" data-st="${k}" aria-pressed="${k === st}"><i class="dot"></i>${ST[k].tool}</button>`).join("")}</div>
+        <p class="note" id="stCambio"${st === m.st || fresh || m.st === "gris" ? " hidden" : ""}>Cambia de <b class="c-${m.st}">${ST[m.st].tool}</b> a <b id="stNuevo"></b> al picar Listo.</p></div>
       <div id="opcBox">${opcHtml()}</div>
       <div class="field"><label class="lbl" for="notaIn">Nota</label>
         <textarea id="notaIn" placeholder="${st === "amarillo" ? "Ej. caja 5 cm abajo del nivel" : "Ej. listo para instalar"}">${esc(m.nota || "")}</textarea></div>
+      ${m.prev ? `<p class="note">Antes${m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " (" + esc(etapaTxt(m.prev.etapa)) + ")" : ""} · ${m.prev.fecha ? fmtFecha(m.prev.fecha) : "último recorrido"}${m.prev.tecnico ? ", " + esc(m.prev.tecnico) : ""}: <b class="c-${m.prev.st}">${m.prev.st === "verde" && m.prev.bien ? esc(m.prev.bien) : ST[m.prev.st].tool}</b>${(m.prev.mot || m.prev.resp) ? " · " + esc([m.prev.mot, m.prev.resp].filter(Boolean).join(" · ")) : ""}</p>` : ""}
+      <div class="warn" id="retroWarn" hidden><b>↓ Retroceso:</b> antes estaba <b>${m.prev ? (m.prev.st === "verde" ? "bien" : ST[m.prev.st].tool.toLowerCase()) + (m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " en " + etapaTxt(m.prev.etapa) : "") : ""}</b>. Toma una foto para que quede registro.</div>
       <p class="note" id="mkFalta" style="color:var(--rojo)" hidden>Pon al menos un detalle: elige una opción o escribe una nota.</p>
       <div class="field"><label class="lbl">Fotos <span style="text-transform:none;letter-spacing:0">(tócala para verla grande)</span></label><div class="fotos" id="fotosBox"></div></div>
       <div class="row">
@@ -870,8 +983,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const paintSt = () => {
         root.querySelectorAll("#stc button").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === st ? "true" : "false"));
         if ($("stNuevo")) { $("stNuevo").textContent = ST[st].tool; $("stNuevo").className = "c-" + st; }
-        $("stCambio").hidden = fresh || st === m.st;
+        $("stCambio").hidden = fresh || st === m.st || m.st === "gris";
+        $("retroWarn").hidden = !esRetro();
       };
+      const esRetro = () => !!(m.prev && m.prev.st !== "gris" && (m.prev.etapa === S.meta.etapa ? RANK[st] < RANK[m.prev.st] : (m.prev.st === "verde" && st === "rojo")));
       const t0 = Date.now();
       root.querySelectorAll("#stc button").forEach(b => b.onclick = () => {
         if (b.dataset.st === st || Date.now() - t0 < 600) return; // el mismo toque que abrió la ventana no cambia el color
@@ -893,12 +1008,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       $("okMk").onclick = () => {
         const nota = $("notaIn").value.trim();
         // No se avanza sin al menos un detalle (una opción o una nota).
-        if (!draft.mot && !draft.resp && !nota) { $("mkFalta").hidden = false; $("mkFalta").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Pon al menos un detalle"); return; }
+        if (st !== "verde" && !draft.mot && !draft.resp && !nota) { $("mkFalta").hidden = false; $("mkFalta").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Pon al menos un detalle"); return; }
+        // Retroceso: estaba mejor en el recorrido anterior. Pide una foto nueva como evidencia.
+        if (esRetro() && fotos.length <= (m.prev.fotos || 0)) { $("retroWarn").hidden = false; $("retroWarn").scrollIntoView({ block: "center", behavior: "smooth" }); toast("Toma una foto del retroceso"); return; }
         const fotosChanged = JSON.stringify(fotos) !== JSON.stringify(m.fotos || []);
         if (st !== m.st || draft.mot !== m.mot || draft.resp !== m.resp || nota !== (m.nota || "") || fotosChanged) {
           if (!fresh) snapshot();
-          m.st = st; m.mot = draft.mot; m.resp = draft.resp; m.nota = nota; m.fotos = fotos; changed();
+          m.st = st; m.mot = draft.mot; m.resp = draft.resp; m.nota = nota; m.fotos = fotos;
         }
+        if (m.rev === false && !fresh) snapshot();
+        m.rev = true; m.retro = esRetro(); changed();
         closeSheet();
       };
       const del = $("delMk");
@@ -913,15 +1032,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function verFoto(fotos, i, titulo) {
     const v = document.createElement("div"); v.className = "visor";
     const paint = () => {
-      v.innerHTML = `<div class="vtop"><span>${esc(titulo)} · foto ${i + 1} de ${fotos.length}</span>${fotos.length > 1 ? '<button type="button" data-d="-1">‹</button><button type="button" data-d="1">›</button>' : ""}<button type="button" data-x="1">Cerrar</button></div><div class="vimg"><img src="${fotos[i]}" alt=""></div>`;
+      v.innerHTML = `<div class="vtop"><span>${esc(titulo)} · foto ${i + 1} de ${fotos.length}</span>${fotos.length > 1 ? '<button type="button" data-d="-1">‹</button><button type="button" data-d="1">›</button>' : ""}<button type="button" data-x="1">Cerrar</button></div><div class="vimg"><img src="${fotos[i]}" alt="" draggable="false"></div><p class="vhint">Pellizca para acercar · doble toque para acercar o alejar</p>`;
       v.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { i = (i + +b.dataset.d + fotos.length) % fotos.length; paint(); });
       v.querySelector("[data-x]").onclick = () => v.remove();
-      const box = v.querySelector(".vimg");
-      box.onclick = e => {
-        const z = !box.classList.contains("zoom"), r = box.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
-        box.classList.toggle("zoom", z);
-        if (z) requestAnimationFrame(() => { box.scrollLeft = fx * box.scrollWidth - r.width / 2; box.scrollTop = fy * box.scrollHeight - r.height / 2; });
+      // Zoom con dos dedos (pellizco) y arrastre con uno; doble toque acerca/aleja.
+      const box = v.querySelector(".vimg"), img = box.querySelector("img"), pts = new Map();
+      let z = 1, tx = 0, ty = 0, g = null, lastTap = 0;
+      const apply = () => { if (z <= 1) { z = 1; tx = ty = 0; } img.style.transform = `translate(${tx}px,${ty}px) scale(${z})`; };
+      const zoomAt = (nz, cx, cy) => { const r = box.getBoundingClientRect(), ox = cx - r.left - r.width / 2, oy = cy - r.top - r.height / 2; nz = Math.min(8, Math.max(1, nz)); tx = ox - (ox - tx) * nz / z; ty = oy - (oy - ty) * nz / z; z = nz; apply(); };
+      box.onpointerdown = e => {
+        box.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pts.size === 2) { const [a, b2] = [...pts.values()]; g = { d: Math.hypot(a[0] - b2[0], a[1] - b2[1]), z, cx: (a[0] + b2[0]) / 2, cy: (a[1] + b2[1]) / 2 }; }
+        else if (pts.size === 1) { const now = Date.now(); if (now - lastTap < 300) { zoomAt(z > 1 ? 1 : 3, e.clientX, e.clientY); lastTap = 0; } else lastTap = now; }
       };
+      box.onpointermove = e => {
+        const prev = pts.get(e.pointerId); if (!prev) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pts.size === 2 && g) { const [a, b2] = [...pts.values()]; zoomAt(g.z * Math.hypot(a[0] - b2[0], a[1] - b2[1]) / g.d, g.cx, g.cy); }
+        else if (pts.size === 1 && z > 1) { tx += e.clientX - prev[0]; ty += e.clientY - prev[1]; apply(); }
+      };
+      box.onpointerup = box.onpointercancel = e => { pts.delete(e.pointerId); if (pts.size < 2) g = null; };
     };
     paint(); document.body.appendChild(v);
   }
@@ -935,11 +1064,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return new Promise((res, rej) => {
       const url = URL.createObjectURL(file), img = new Image();
       img.onload = () => {
-        const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const k = Math.min(1, 2048 / Math.max(img.width, img.height));
         const c = document.createElement("canvas");
         c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.82));
+        URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.86));
       };
       img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("foto")); };
       img.src = url;
@@ -1008,7 +1137,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
       <p class="note">Las dos opciones usan la fecha de hoy y parten de los círculos de ese recorrido. En Odoo, el del ${fmtFecha(prev.fecha)} se queda guardado tal como estaba.</p>`, () => {
       $("pvFix").onclick = () => { S.meta.fecha = today(); S.meta.tecnico = prev.tecnico || S.meta.tecnico; refreshHeader(); saveDraft(); closeSheet(); };
-      $("pvNew").onclick = () => { S.meta.fecha = today(); S.meta.rid = newId(); refreshHeader(); saveDraft(); closeSheet(); openMetaSheet(true); };
+      $("pvNew").onclick = () => { if ((prev.fecha || "") < today()) { paraRevisar(S.marks, prev.fecha, prev.tecnico); drawMarks(); } S.meta.fecha = today(); S.meta.rid = newId(); refreshHeader(); saveDraft(); closeSheet(); openMetaSheet(true); };
     });
   }
   function openMetaSheet(start) {
@@ -1090,7 +1219,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           continue;
         }
         const c = ST[m.st];
-        pg.drawCircle({ x: m.x, y: m.y, size: rpt, borderColor: rgb(...c.rgb), borderWidth: rpt * 0.22 });
+        pg.drawCircle({ x: m.x, y: m.y, size: rpt, borderColor: rgb(...c.rgb), borderWidth: rpt * 0.22, borderOpacity: m.rev === false ? 0.45 : 1, borderDashArray: m.rev === false ? [rpt * 0.35, rpt * 0.3] : undefined });
+        if (m.retro) { const [rx, ry] = v1.convertToPdfPoint(...(([a, b]) => [a - rpt, b - rpt])(v1.convertToViewportPoint(m.x, m.y))); pg.drawCircle({ x: rx, y: ry, size: rpt * 0.45, color: rgb(0.85, 0.19, 0.15) }); }
         at(m).plan = { page: pg, x: m.x, y: m.y, r: rpt };
         const [vx, vy] = v1.convertToViewportPoint(m.x, m.y);
         const [tx, ty] = v1.convertToPdfPoint(vx + rpt * 1.3, vy + rpt * 0.25);
@@ -1121,9 +1251,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       return H - M - 54;
     };
     const circ = S.marks.filter(isCircle), notas = S.marks.filter(isTxt);
-    const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0 }; circ.forEach(m => cnt[m.st]++);
+    const cnt = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 }; circ.forEach(m => cnt[m.st]++);
     const total = circ.length || 1, pct = k => Math.round(cnt[k] * 100 / total);
-    const ORDER = ["verde", "azul", "amarillo", "rojo"];
+    const ORDER = ["verde", "amarillo", "rojo"].concat(cnt.gris ? ["gris"] : []);
 
     // Portada
     const cv = front();
@@ -1134,8 +1264,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     let ob = safe(S.meta.obra || "Obra"), obs = 40;
     while (obs > 18 && font.widthOfTextAtSize(ob, obs) > W - 2 * M - 40) obs -= 2;
     center(cv, fit(ob, obs, font, W - 2 * M), obs, font, 330, INK);
-    if (S.meta.plano) center(cv, S.meta.plano, 13, font, 304, INK);
-    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.length} salidas revisadas`, 11, fontR, S.meta.plano ? 282 : 300, GRAY);
+    if (S.meta.plano || S.meta.etapa) center(cv, [S.meta.plano, etapaTxt(S.meta.etapa)].filter(Boolean).join("   ·   "), 13, font, 304, INK);
+    center(cv, `${fmtFecha(S.meta.fecha)}   ·   Técnico: ${S.meta.tecnico || "-"}   ·   ${circ.filter(m => m.rev !== false).length === circ.length ? circ.length + " salidas revisadas" : circ.filter(m => m.rev !== false).length + " de " + circ.length + " salidas revisadas"}`, 11, fontR, S.meta.plano ? 282 : 300, GRAY);
     const bw = 460, bx = (W - bw) / 2, byy = 230;
     let xx = bx;
     for (const k of ORDER) { const w = bw * cnt[k] / total; if (w > 0) cv.drawRectangle({ x: xx, y: byy, width: w, height: 14, color: rgb(...ST[k].rgb) }); xx += w; }
@@ -1159,32 +1289,80 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       sp.drawText(`${pct(k)}% de ${circ.length}`, { x: tx + 54, y: y - 39, size: 9, font: fontR, color: GRAY });
     });
     y -= 82;
-    const RANK = { rojo: 0, amarillo: 1, azul: 2, verde: 3 };
-    const pend = circ.slice().sort((a, b) => (a.st === b.st ? a.n - b.n : RANK[a.st] - RANK[b.st]));
-    const cols = [M + 8, M + 44, M + 164, M + 344, M + 430];
-    const head = () => {
-      sp.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: INK });
-      ["#", "Status", "Detalle", "Qué sigue / Quién", "Nota"].forEach((h, i) => sp.drawText(h, { x: cols[i], y, size: 9, font, color: rgb(1, 1, 1) }));
-      y -= 22;
-    };
-    if (!pend.length) sp.drawText("No se marcaron salidas en este recorrido.", { x: M, y, size: 11, font: fontR, color: INK });
+    // Pendientes: solo lo que falta (rojo y amarillo) y lo que retrocedió, cada uno con un recorte del plano
+    // para ubicarlo sin buscar. Lo que está bien solo cuenta en el resumen.
+    const sinRev = circ.filter(m => m.rev === false), retros = circ.filter(m => m.retro);
+    const conPrev = circ.filter(m => m.prev).length;
+    if (conPrev) {
+      const rev = conPrev - sinRev.length;
+      sp.drawText(safe(`Revisadas ${rev + circ.filter(m => !m.prev).length} de ${circ.length}`), { x: M, y, size: 11, font, color: INK });
+      if (sinRev.length) sp.drawText(safe(`${sinRev.length} sin revisar`), { x: M + 150, y, size: 11, font, color: GRAY });
+      if (retros.length) sp.drawText(safe(`${retros.length} retroceso${retros.length > 1 ? "s" : ""}`), { x: M + 260, y, size: 11, font, color: rgb(0.85, 0.19, 0.15) });
+      y -= 24;
+    }
+    const pend = circ.filter(m => m.retro || ((m.st === "rojo" || m.st === "amarillo") && m.rev !== false))
+      .sort((a, b) => (!!b.retro - !!a.retro) || (RANK[a.st] - RANK[b.st]) || (a.n - b.n));
+    const cols = [M]; // (se conserva para los links)
+    if (!pend.length) { sp.drawText(circ.length ? "Sin pendientes: todo lo revisado está bien." : "No se marcaron salidas en este recorrido.", { x: M, y, size: 11, font: fontR, color: INK }); y -= 20; }
     else {
-      sp.drawText("Relación de salidas", { x: M, y, size: 13, font, color: INK });
-      right(sp, "Toca una salida en el plano para ver su detalle y su foto. Toca el número aquí para ir al plano.", 8, fontR, y + 1, GRAY);
-      y -= 22; head();
-      pend.forEach((m, r) => {
-        if (y < 70) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); head(); }
-        const c = ST[m.st];
-        if (r % 2) sp.drawRectangle({ x: M, y: y - 5, width: W - 2 * M, height: 17, color: TINT });
-        sp.drawCircle({ x: cols[1] + 4, y: y + 3, size: 3.5, borderColor: rgb(...c.rgb), borderWidth: 1.5 });
-        at(m).row = { page: sp, y };
-        const row = [String(m.n), c.name, m.mot || "-", m.resp || "-", (m.nota || "") + (m.fotos && m.fotos.length ? `  (${m.fotos.length} foto${m.fotos.length > 1 ? "s" : ""})` : "")];
-        row.forEach((v, i) => {
-          const maxW = (i === 4 ? W - M : cols[i + 1]) - cols[i] - 8 - (i === 1 ? 12 : 0);
-          sp.drawText(fit(v, 9, i === 1 ? font : fontR, maxW), { x: cols[i] + (i === 1 ? 12 : 0), y, size: 9, font: i === 1 ? font : fontR, color: i === 1 ? rgb(...c.text) : INK });
-        });
-        y -= 17;
-      });
+      sp.drawText(safe(`Pendientes (${pend.length})`), { x: M, y, size: 13, font, color: INK });
+      right(sp, "Toca el recorte para ir al plano.", 8, fontR, y + 1, GRAY);
+      y -= 14;
+      const CW = (W - 2 * M - 16) / 2, CH = 104, CR = 150, PH = 80;
+      let col = 0;
+      const embCache = new Map();
+      for (const m of pend) {
+        if (col === 0 && y - CH < 50) { sp = front(); y = header(sp, "Pendientes (cont.)"); }
+        const x0 = M + col * (CW + 16), y0 = y - CH, c = ST[m.st];
+        sp.drawRectangle({ x: x0, y: y0, width: CW, height: CH, borderColor: LINE, borderWidth: 0.8, color: rgb(1, 1, 1) });
+        sp.drawRectangle({ x: x0, y: y0, width: 3, height: CH, color: rgb(...c.rgb) });
+        // Recorte del plano alrededor de la salida (vectorial, con sus marcas).
+        const q = pos.get(m);
+        if (q && q.plan) {
+          const pg = q.plan.page, r = q.plan.r, half = r * 7, hh = half * (CH - 8) / CR;
+          const bx = { left: m.x - half, right: m.x + half, bottom: m.y - hh, top: m.y + hh };
+          try {
+            const emb = await pdf.embedPage(pg, bx);
+            const jp = await S.doc.getPage(m.page), rot = ((jp.rotate % 360) + 360) % 360;
+            const bw = bx.right - bx.left, bh = bx.top - bx.bottom;
+            const sw = rot % 180 ? bh : bw, sh = rot % 180 ? bw : bh, sc = Math.min((CR - 8) / sw, (CH - 8) / sh);
+            let px = x0 + 7 + (CR - 8 - sw * sc) / 2, py = y0 + 4 + (CH - 8 - sh * sc) / 2;
+            if (rot === 90) py += bw * sc; else if (rot === 180) { px += bw * sc; py += bh * sc; } else if (rot === 270) px += bh * sc;
+            sp.drawPage(emb, { x: px, y: py, xScale: sc, yScale: sc, rotate: degrees(-rot) });
+            sp.drawRectangle({ x: x0 + 7, y: y0 + 4, width: CR - 8, height: CH - 8, borderColor: LINE, borderWidth: 0.6 });
+            at(m).row = { page: sp, rect: [x0, y0, x0 + CR, y0 + CH], y: y - 20 };
+          } catch (e) {}
+        }
+        // Texto
+        let ty = y - 18; const tx = x0 + CR + 8, tw = CW - CR - 16 - (m.fotos && m.fotos.length ? PH + 6 : 0);
+        sp.drawText(safe(`${m.n}`), { x: tx, y: ty, size: 15, font, color: rgb(...c.text) });
+        const nw = font.widthOfTextAtSize(`${m.n}`, 15) + 6;
+        sp.drawText(fit(c.name, 9, font, tw - nw), { x: tx + nw, y: ty + 2, size: 9, font, color: rgb(...c.text) });
+        ty -= 15;
+        if (m.retro) { sp.drawText(fit(`Retroceso: antes ${m.prev.st === "verde" ? "bien" : ST[m.prev.st].tool.toLowerCase()}${m.prev.etapa && m.prev.etapa !== S.meta.etapa ? " (etapa " + m.prev.etapa + ")" : ""}`, 8.5, font, tw), { x: tx, y: ty, size: 8.5, font, color: rgb(0.85, 0.19, 0.15) }); ty -= 12; }
+        const txt = [m.mot, m.resp ? "Resuelve: " + m.resp : "", m.nota].filter(Boolean).join(" · ") || "-";
+        const ws = safe(txt).split(" "), ls = [""];
+        for (const w of ws) { const t2 = ls[ls.length - 1] ? ls[ls.length - 1] + " " + w : w; if (fontR.widthOfTextAtSize(t2, 8.5) <= tw) ls[ls.length - 1] = t2; else ls.push(w); }
+        ls.slice(0, 5).forEach(l => { sp.drawText(l, { x: tx, y: ty, size: 8.5, font: fontR, color: INK }); ty -= 11; });
+        if (m.fotos && m.fotos.length) {
+          try {
+            const img = await pdf.embedJpg(await fotoBytes(m.fotos[m.fotos.length - 1]));
+            const k2 = Math.min(PH / img.width, PH / img.height), iw = img.width * k2, ih = img.height * k2;
+            const fx = x0 + CW - PH - 8, fyy = y0 + (CH - PH) / 2;
+            sp.drawRectangle({ x: fx, y: fyy, width: PH, height: PH, color: TINT });
+            sp.drawImage(img, { x: fx + (PH - iw) / 2, y: fyy + (PH - ih) / 2, width: iw, height: ih });
+            at(m).thumb = { page: sp, rect: [fx, fyy, fx + PH, fyy + PH] };
+          } catch (e) {}
+        }
+        col = 1 - col; if (col === 0) y -= CH + 10;
+      }
+      if (col === 1) y -= CH + 10;
+    }
+    if (sinRev.length) {
+      y -= 8; if (y < 90) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); }
+      sp.drawText(safe(`Sin revisar en esta visita (${sinRev.length})`), { x: M, y, size: 13, font, color: INK }); y -= 18;
+      const t = sinRev.map(m => `${m.n} (${ST[m.st].tool})`).join("   ");
+      for (const l of (safe(t).match(/.{1,150}(\s|$)/g) || [])) { if (y < 60) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); } sp.drawText(l.trim(), { x: M, y, size: 9, font: fontR, color: GRAY }); y -= 13; }
     }
     if (notas.length) {
       y -= 18; if (y < 110) { sp = front(); y = header(sp, "Resumen del recorrido (cont.)"); }
@@ -1211,7 +1389,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       return lines;
     };
-    const groups = ["rojo", "amarillo", "azul", "verde"].map(k => ({
+    const groups = ["rojo", "amarillo", "verde"].map(k => ({
       k, items: circ.filter(m => m.st === k && m.fotos && m.fotos.length).sort((a, b) => a.n - b.n).flatMap(m => m.fotos.map(f => ({ m, f })))
     })).filter(g => g.items.length);
     let fp = null, fy = 0;
@@ -1261,13 +1439,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const { page, x, y: py, r } = q.plan, k = r * 1.5, z = r * 9;
       const planBox = clampBox(page, [x - z * 1.6, py - z, x + z * 1.6, py + z]);
       const fotoBox = q.foto && clampBox(q.foto.page, [q.foto.x - 30, q.foto.y - 36, q.foto.x + q.foto.w + 30, q.foto.y + q.foto.w + 20]);
-      const rowBox = q.row && clampBox(q.row.page, [M - 6, q.row.y - 40, W - M + 6, q.row.y + 50]);
-      if (q.foto) link(page, [x - k, py - k, x + k, py + k], q.foto.page, fotoBox);
-      else if (q.row) link(page, [x - k, py - k, x + k, py + k], q.row.page, rowBox);
-      if (q.row) {
-        link(q.row.page, [M, q.row.y - 5, cols[2] - 4, q.row.y + 12], page, planBox);
-        if (q.foto) link(q.row.page, [cols[4] - 4, q.row.y - 5, W - M, q.row.y + 12], q.foto.page, fotoBox);
-      }
+      const rowBox = q.row && clampBox(q.row.page, q.row.rect ? [q.row.rect[0] - 10, q.row.rect[1] - 20, q.row.rect[0] + 400, q.row.rect[3] + 20] : [M - 6, q.row.y - 40, W - M + 6, q.row.y + 50]);
+      if (q.row) link(page, [x - k, py - k, x + k, py + k], q.row.page, rowBox);
+      else if (q.foto) link(page, [x - k, py - k, x + k, py + k], q.foto.page, fotoBox);
+      if (q.row && q.row.rect) link(q.row.page, q.row.rect, page, planBox);
+      if (q.thumb && q.foto) link(q.thumb.page, q.thumb.rect, q.foto.page, fotoBox);
       if (q.foto) link(q.foto.page, [q.foto.x, q.foto.y, q.foto.x + q.foto.w, q.foto.y + q.foto.w], page, planBox);
     }
 
@@ -1276,7 +1452,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     for (const p of ours) {
       if (p !== cv) p.drawRectangle({ x: M, y: 36, width: W - 2 * M, height: 0.6, color: LINE });
       p.drawText("soporte@automaproyecto.com", { x: M, y: 22, size: 8.5, font, color: BLUE });
-      center(p, fit(`Recorrido de obra  ·  ${S.meta.obra || "Obra"}  ·  ${fmtFecha(S.meta.fecha)}`, 8, fontR, W - 2 * M - 260), 8, fontR, 22, GRAY);
+      center(p, fit(`Recorrido de obra  ·  ${S.meta.obra || "Obra"}  ·  ${etapaTxt(S.meta.etapa)}  ·  ${fmtFecha(S.meta.fecha)}`, 8, fontR, W - 2 * M - 260), 8, fontR, 22, GRAY);
       right(p, `Página ${all.indexOf(p) + 1} de ${N}`, 8, fontR, 22, GRAY);
     }
     await pdf.attach(S.bytes.slice(0), "original.pdf", { mimeType: "application/pdf", description: "Plano sin marcas" });
@@ -1301,7 +1477,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const HIST_MAX = 40;
   async function saveHist() {
     try {
-      const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+      const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
       S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
       await DB.histPut(S.meta.rid, { rid: S.meta.rid, meta: { ...S.meta }, marks: JSON.parse(JSON.stringify(S.marks)), bytes: S.bytes, counts: c, savedAt: Date.now() });
       const all = (await DB.histAll()).sort((a, b) => b.savedAt - a.savedAt);
@@ -1309,7 +1485,37 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       paintHistBtn();
     } catch (e) {}
   }
+  // Resumen en el inicio: un número por etapa = cuántas obras tienen trabajo pendiente en esa etapa.
+  // Cada plano cuenta en una sola etapa: la que está en curso con pendientes, o la siguiente si ya terminó.
+  async function pintarResumen() {
+    const box = $("resumen"); if (!box) return;
+    let lista = null; try { lista = JSON.parse(localStorage.getItem("automa-cat") || "null"); } catch (e) {}
+    if (!lista || !lista.length) { box.hidden = true; return; }
+    const histAll = await DB.histAll();
+    const por = {}; ETAPAS.forEach(e => por[e.n] = []);
+    for (const it of lista) for (const pl of (it.planos || [])) {
+      const recs = recsPlano(pl, histAll), ets = Object.keys(recs).map(Number);
+      const et = ets.length ? Math.max(...ets) : 0, M = +it.etapa || 0;
+      const h = et ? recs[et] : null;
+      const e = h ? estadoRec(h) : null;
+      // Etapa puesta en Odoo más adelante que lo recorrido: la obra va en esa etapa.
+      if (M > et && etapaDe(M)) por[M].push({ it, pl, txt: "Por empezar", pend: 0, fecha: h ? h.meta.fecha : "" });
+      else if (!h) por[1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: "" });
+      else if (!e.ok) por[et].push({ it, pl, txt: e.txt, pend: e.pend, fecha: h.meta.fecha });
+      else if (etapaDe(et + 1)) por[et + 1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: h.meta.fecha });
+    }
+    box.hidden = false;
+    box.innerHTML = `<h2>Obras pendientes por etapa</h2><div class="etgrid">` + ETAPAS.map(e => `<button type="button" class="etn${por[e.n].length ? "" : " cero"}" data-n="${e.n}"><b>${por[e.n].length}</b><span>${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][e.n]}</span></button>`).join("") + `</div>`;
+    box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
+      const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
+      sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${filas.length ? `${filas.length} obra${filas.length > 1 ? "s" : ""} pendiente${filas.length > 1 ? "s" : ""}` : "No hay obras pendientes en esta etapa."}</p>
+        <div class="hlist">${filas.map((f, i) => `<div class="hrow et-pend"><div class="hinfo"><b>${esc(f.it.cliente_nombre || f.it.obra)}${f.it.concepto ? " · " + esc(f.it.concepto) : ""}</b><span>${esc(f.pl.tipo)} · ${esc(f.txt)}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => {
+        $("sheetHost").querySelectorAll("[data-i]").forEach(x => x.onclick = () => { const f = filas[+x.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
+      });
+    });
+  }
   async function paintHistBtn() {
+    pintarResumen();
     const n = (await DB.histAll()).length, b = $("histBtn");
     // El botón ya no se muestra: los recorridos se retoman desde Planos de obras. La copia local se sigue usando ahí (y sin señal).
     b.hidden = true; b.textContent = `Mis recorridos (${n})`;
@@ -1338,6 +1544,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   $("histBtn").onclick = openHist;
   paintHistBtn();
+  // Al abrir la app se actualiza en silencio la lista de obras para el resumen del inicio.
+  setTimeout(async () => { const base = planosBase(); if (!base) return;
+    try { const l = (await loadJs(`${base.origin}/web/content/${base.id}?access_token=${base.token}`, "__automaPlanos", 30000))[0]; localStorage.setItem("automa-cat", JSON.stringify(l)); pintarResumen(); } catch (e) {} }, 800);
   function downloadFile(file) {
     const a = document.createElement("a"), url = URL.createObjectURL(file);
     a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
@@ -1347,6 +1556,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     if (!S.marks.length) { toast("Aún no hay nada marcado en el plano"); return; }
     if (!S.meta.tecnico || !S.meta.obra) { openMetaSheet(); toast("Completa obra y técnico antes de guardar"); return; }
     if (!getOdoo()) { openMetaSheet(); toast("Primero conecta la app con Odoo: pega el enlace que te mandó Mauricio"); return; }
+    const faltan = porRevisar();
+    if (faltan.length && !S.okSinRevisar) {
+      sheet(`<h2>Te faltan ${faltan.length} salida${faltan.length > 1 ? "s" : ""} por revisar</h2>
+        <p class="note">Salidas: <b>${faltan.map(m => m.n).join(", ")}</b>. Puedes guardar así, pero en el PDF y en Odoo quedan como <b>sin revisar</b>.</p>
+        <div class="row"><button type="button" class="btn" id="frSeguir">Seguir revisando</button><button type="button" class="btn primary" id="frGuardar">Guardar así</button></div>`, () => {
+        $("frSeguir").onclick = closeSheet;
+        $("frGuardar").onclick = () => { closeSheet(); S.okSinRevisar = true; $("saveBtn").click(); };
+      });
+      return;
+    }
+    S.okSinRevisar = false;
     const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Preparando…";
     let file = null;
     try { file = await makeFile(); }
@@ -1476,6 +1696,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     try {
       lista = (await loadJs(`${base.origin}/web/content/${base.id}?access_token=${base.token}`, "__automaPlanos", 30000))[0];
       try { localStorage.setItem("automa-cat", JSON.stringify(lista)); } catch (e) {}
+      pintarResumen();
     } catch (e) {
       if (e.message === "red" && await conexionVigente() === false) { $("busy").hidden = true; $("busy").textContent = "Cargando plano…"; conexionVencida(); return; }
       offline = true;
@@ -1555,47 +1776,77 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       }
       $("busy").textContent = "Cargando plano…";
     }
-    // ¿Hay un recorrido anterior de este plano? Se ofrece el más reciente: el de este iPad o el último guardado en Odoo (de cualquier técnico).
     const etiqueta = `${pl.tipo}${pl.nombre && pl.nombre !== pl.tipo ? " - " + pl.nombre : ""}`;
-    const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta };
-    // Siempre se pregunta cómo abrir el plano: seguir lo que quedó sin guardar en este equipo,
-    // partir del último recorrido guardado (de cualquier técnico) o empezar con el plano limpio.
-    const dr = await DB.get(dk(meta));
-    const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
-    let prev = null;
-    const local = (await DB.histAll()).filter(h => h.meta.plano_id === pl.id).sort((a, b) => b.savedAt - a.savedAt)[0];
-    if (local) prev = { bytes: local.bytes, marks: local.marks, fecha: local.meta.fecha, tecnico: local.meta.tecnico, obra: local.meta.obra, donde: "en este equipo" };
-    const u = pl.ultimo;
-    if (u && u.url && (!prev || (u.fecha || "") > (prev.fecha || ""))) {
-      const r = await ultimoDeOdoo(pl, u, base);
-      if (r) prev = { ...r, fecha: u.fecha || r.fecha, tecnico: u.tecnico || r.tecnico, donde: "en Odoo" };
-    }
-    const limpio = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
     $("busy").hidden = true;
-    if (!prev && !draft) return limpio();
-    const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
-    sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2>
-      ${draft ? `<p class="note">Tienes un recorrido <b>sin guardar</b> de este plano en este equipo (${nDraft} círculo${nDraft === 1 ? "" : "s"}).</p>` : ""}
-      ${prev ? `<p class="note">Último recorrido guardado: <b>${prev.fecha ? fmtFecha(prev.fecha) : "sin fecha"}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}</b> (${prev.donde}).</p>` : ""}
-      <div class="stack">
-        ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
-        ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">Partir del último recorrido</button>` : ""}
-        <button type="button" class="btn" id="plClean">Plano limpio</button>
-      </div>`, () => {
-      $("plClean").onclick = limpio;
-      if (draft) $("plDraft").onclick = () => recuperar(dk(meta));
-      if (prev) $("plPrev").onclick = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false;
-        startSession(new Uint8Array(prev.bytes), migrate(prev.marks, 2), { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: newId() }, 1, true); };
+    const recs = recsPlano(pl, await DB.histAll());
+    const ultimaDe = n => recs[n];
+    // Lo que viene de Odoo se baja (o se toma del iPad) cuando se necesita su plano con las marcas.
+    const conBytes = async (h, n) => {
+      if (!h || !h.odoo) return h;
+      const r = await ultimoDeOdoo(pl, h.odoo, base, "r" + pl.id + "e" + n); $("busy").hidden = true;
+      return r ? { bytes: r.bytes, marks: r.marks, meta: { fecha: h.odoo.fecha || r.fecha, tecnico: h.odoo.tecnico || r.tecnico, obra: r.obra, etapa: n } } : null;
+    };
+    const estado = n => {
+      const M = +it.etapa || 0, h = ultimaDe(n);
+      if (!h) return n < M ? { txt: "✓ Ya pasó (marcado en Odoo)", cls: "ok" } : { txt: "Pendiente · sin empezar", cls: n === M ? "pend cur" : "pend" };
+      const e = estadoRec(h);
+      return e.ok ? { txt: `✓ Terminada · ${e.bien}/${e.total} bien · ${fmtFecha(h.meta.fecha)}`, cls: "ok" }
+        : { txt: `Pendiente · ${e.txt} · ${fmtFecha(h.meta.fecha)}`, cls: "pend cur" };
+    };
+    sheet(`<h2>${esc(it.obra)} · ${esc(pl.tipo)}</h2><p class="note">¿Qué etapa vas a recorrer?</p>
+      <div class="hlist">${ETAPAS.map(e => { const s2 = estado(e.n); return `<div class="hrow et-${s2.cls.split(" ")[0]}"><div class="hinfo"><b>${e.n} · ${esc(e.nombre)}</b><span>${s2.txt}</span></div><button type="button" class="btn${s2.cls.includes("cur") ? " primary" : ""}" data-et="${e.n}">Abrir</button></div>`; }).join("")}</div>`, () => {
+      $("sheetHost").querySelectorAll("[data-et]").forEach(btn => btn.onclick = () => abrirEtapa(+btn.dataset.et));
     });
+    const abrirEtapa = async n => {
+      closeSheet();
+      const meta = { obra: it.obra, tecnico: S.meta.tecnico, fecha: today(), order_id: it.order_id, plano_id: pl.id, plano: etiqueta, etapa: n };
+      const dr = await DB.get(dk(meta));
+      const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
+      // Misma etapa: se sigue en su plano. Si no hay, se parte de la etapa anterior más reciente (o del último recorrido en Odoo).
+      let prev = null; const same = await conBytes(ultimaDe(n), n);
+      if (same) prev = { bytes: same.bytes, marks: same.marks, fecha: same.meta.fecha, tecnico: same.meta.tecnico, obra: same.meta.obra, etapa: n, donde: etapaTxt(n) };
+      else {
+        let low = null;
+        for (let k = n - 1; k >= 1 && !low; k--) if (recs[k]) low = await conBytes(recs[k], k);
+        if (low) prev = { bytes: low.bytes, marks: low.marks, fecha: low.meta.fecha, tecnico: low.meta.tecnico, obra: low.meta.obra, etapa: low.meta.etapa, donde: etapaTxt(low.meta.etapa) };
+        else if (pl.ultimo && pl.ultimo.url) {
+          const r = await ultimoDeOdoo(pl, pl.ultimo, base); $("busy").hidden = true;
+          if (r) prev = { ...r, fecha: pl.ultimo.fecha || r.fecha, tecnico: pl.ultimo.tecnico || r.tecnico, etapa: 0, donde: "último recorrido en Odoo" };
+        }
+      }
+      const limpio = async () => { closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false; startSession(new Uint8Array(bytes), [], meta, 1, true); };
+      if (!prev && !draft) return limpio();
+      const partir = async () => {
+        closeSheet(); if (draft) await DB.del(dk(meta)); $("busy").hidden = false;
+        const ms = JSON.parse(JSON.stringify(migrate(prev.marks, 2)));
+        const otroDia = (prev.fecha || "") < today();
+        startSession(new Uint8Array(prev.bytes), prev.etapa !== n || otroDia ? paraRevisar(ms, prev.fecha, prev.tecnico, prev.etapa, n) : ms,
+          { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: prev.etapa === n && !otroDia ? (same && same.meta.rid) || newId() : newId() }, 1, true);
+      };
+      const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
+      sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${esc(it.obra)} · ${esc(pl.tipo)}</p>
+        ${draft ? `<p class="note">Tienes esta etapa <b>sin guardar</b> en este equipo (${nDraft} salida${nDraft === 1 ? "" : "s"}).</p>` : ""}
+        ${prev ? `<p class="note">${prev.etapa === n ? "Último recorrido de esta etapa" : "Se parte de"}: <b>${esc(prev.donde)}</b> · ${prev.fecha ? fmtFecha(prev.fecha) : ""}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}${prev.etapa !== n ? ". Las salidas salen en gris para que las revises en esta etapa." : ""}</p>` : ""}
+        <div class="stack">
+          ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
+          ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">${prev.etapa === n ? "Seguir con esta etapa" : "Empezar con esas salidas"}</button>` : ""}
+          <button type="button" class="btn" id="plClean">Plano limpio</button>
+        </div>`, () => {
+        $("plClean").onclick = limpio;
+        if (draft) $("plDraft").onclick = () => recuperar(dk(meta));
+        if (prev) $("plPrev").onclick = partir;
+      });
+    };
   }
   // Baja (o toma del iPad si no hay señal) el último recorrido de un plano guardado en Odoo y saca el plano con sus marcas.
-  async function ultimoDeOdoo(pl, u, base) {
-    let c = await DB.planGet("r" + pl.id), pdf = c && c.v === u.v ? c.bytes : null;
+  async function ultimoDeOdoo(pl, u, base, key) {
+    key = key || "r" + pl.id;
+    let c = await DB.planGet(key), pdf = c && c.v === u.v ? c.bytes : null;
     if (!pdf) {
       $("busy").hidden = false; $("busy").textContent = "Buscando último recorrido…";
       try {
         pdf = b64ToBytes((await loadJs(base.origin + u.url, "__automaRecorrido"))[1]);
-        await DB.planPut("r" + pl.id, { v: u.v, bytes: pdf });
+        await DB.planPut(key, { v: u.v, bytes: pdf });
       } catch (e) {
         pdf = c ? c.bytes : null;
       }
@@ -1656,9 +1907,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     return d;
   }
   async function queueOdoo(file) {
-    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0 };
+    const c = { rojo: 0, amarillo: 0, azul: 0, verde: 0, gris: 0 };
     S.marks.forEach(m => { if (isCircle(m)) c[m.st]++; });
-    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, ...detalles(), archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
+    const body = JSON.stringify({ uid: S.meta.rid, obra: S.meta.obra, fecha: S.meta.fecha, tecnico: S.meta.tecnico, order_id: S.meta.order_id || 0, plano_id: S.meta.plano_id || 0, plano: S.meta.plano || "", ...c, ...detalles(),
+      etapa: S.meta.etapa || 0, sinrev: S.marks.filter(m => isCircle(m) && (m.rev === false || m.st === "gris")).length, retro: S.marks.filter(m => isCircle(m) && m.retro).length, archivo: file.name, pdf: b64(new Uint8Array(await file.arrayBuffer())) });
     await DB.outPut(S.meta.rid, { body, obra: S.meta.obra, fecha: S.meta.fecha, at: Date.now() });
     await paintPending();
     return flushOdoo(true);
