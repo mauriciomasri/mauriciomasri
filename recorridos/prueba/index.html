@@ -288,14 +288,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     { n: 1, nombre: "Tuberías con rafia", bien: "Tubería con rafia OK",
       detalle: ["Falta rafia", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos"],
       mal: ["Falta tubería", "Falta caja", "Tubería tapada"] },
-    { n: 2, nombre: "Cableado", bien: "Cableado",
+    { n: 2, nombre: "Cableado", bien: "Cableado OK",
       detalle: ["Falta bajada de cable", "Sacar cable", "Definir ubicación"],
       mal: ["Falta cablear", "No pasa el cable"] },
     { n: 3, nombre: "Ubicaciones y bajadas", bien: "Ubicación y bajada OK",
       detalle: ["Ubicación ligeramente mal", "Falta bajada", "Sacar cable", "Sacar contacto"],
       mal: ["Ubicación mal", "Cable ahogado", "Cable en plafón"] },
     { n: 4, nombre: "Supervisión para instalación", bien: "Listo para instalar",
-      detalle: ["Falta resane", "Falta chalupa", "Cable corto"],
+      detalle: ["Falta resane", "Falta chalupa", "Falta acabado", "Falta pintura"],
       mal: ["No está listo", "Cable ahogado", "Cable en plafón"] },
     { n: 5, nombre: "Instalación de equipo", bien: "Instalado",
       detalle: ["Falta pieza", "Falta placa", "Instalado provisional"],
@@ -316,8 +316,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const e = etapaDe(n); if (!e) return;
     ST.verde.name = e.bien; ST.amarillo.name = "Detalle"; ST.rojo.name = "Mal";
     OPC.verde = [];
-    OPC.amarillo = [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: e.detalle.concat("Otro"), multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }];
-    OPC.rojo = [{ k: "mot", lbl: "¿Qué está mal? (puedes elegir varias)", opts: e.mal.concat("Otro"), multi: true }, { k: "resp", lbl: "¿Quién lo resuelve?", opts: RESP }];
+    OPC.amarillo = [{ k: "mot", lbl: "¿Qué falta? (puedes elegir varias)", opts: e.detalle.concat("Otro"), multi: true }];
+    OPC.rojo = [{ k: "mot", lbl: "¿Qué está mal? (puedes elegir varias)", opts: e.mal.concat("Otro"), multi: true }];
   }
   const MOTIVOS = ["Falta cablear", "Falta bajada de tubería", "Caja mal puesta", "Ubicación ligeramente mal", "Abrir huecos", "Sacar cable", "Sacar contacto", "Definir ubicación", "Otro"];
   const RESP = ["Automa", "Obra"];
