@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Automa Recorridos</title>
-<meta name="theme-color" content="#1f4e79">
+<meta name="theme-color" content="#2B2E34">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Recorridos">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 @font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Barlow";font-weight:500 600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format("woff2")}
@@ -172,6 +172,109 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#2b3440;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
 .sheet .stack{display:flex;flex-direction:column;gap:10px}
 .sheet .stack .btn{padding:14px;font-size:16px}
+/* ===== v60 · diseño Actividades: grafito + naranja ===== */
+:root,:root[data-theme],:root:not([data-theme="light"]){
+  --bg:#2B2E34; --panel:#33373D; --row:#35393F; --row2:#31353B; --card:#3A3E45; --ink:#F7F8FA; --muted:#A3A8B1; --line:#41454C;
+  --accent:#FF7A45; --accent-ink:#FFFFFF; --plan:#24272C; --amarillo-ink:#FFC94D; --azul:#5B9BF0;
+  --ok:#4BE0A0; --urg:#FF5A6E;
+  --f-body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --f-label:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:dark}
+.mono,.etn b,.h-reloj{font-family:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace}
+.top{background:var(--bg);border-bottom:2px solid var(--accent)}
+.top .obra{font-weight:800;letter-spacing:.01em}
+.btn{border-radius:10px;border-color:var(--line);background:var(--row)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheet{background:var(--panel);border:1px solid var(--line);border-bottom:0}
+.sheet h2{font-weight:800;letter-spacing:.01em}
+.scrim{background:rgba(20,22,26,.72)}
+.hrow{background:var(--row);border-color:var(--line)}
+.hrow.et-ok{border-color:color-mix(in srgb,var(--ok) 60%,var(--line));background:color-mix(in srgb,var(--ok) 8%,var(--row))}
+.hrow.et-ok .hinfo span{color:var(--ok)}
+.hrow.et-pend{border-color:color-mix(in srgb,var(--urg) 55%,var(--line));background:color-mix(in srgb,var(--urg) 7%,var(--row))}
+.hrow.et-pend .hinfo span{color:var(--urg)}
+.chip{background:var(--row)}
+.linkbtn{color:var(--accent)}
+/* Inicio */
+.app:has(#empty:not([hidden])) .top{display:none}
+.empty{padding:0;display:block;overflow:hidden}
+.home{height:100%;display:flex;flex-direction:column;max-width:1180px;margin:0 auto}
+.h-head{display:flex;align-items:center;gap:14px;padding:calc(14px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) 12px max(20px,env(safe-area-inset-left,0px));border-bottom:2px solid var(--accent)}
+.h-logo{height:26px;width:auto;filter:invert(1) hue-rotate(180deg);mix-blend-mode:screen;flex:none}
+.h-sep{width:1px;height:30px;background:var(--line);flex:none}
+.h-tit{min-width:0;flex:1}
+.h-titulo{font-size:22px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-fecha{color:var(--accent);font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:4px;white-space:nowrap}
+.h-tec{display:flex;align-items:center;gap:8px;background:var(--row);border:1px solid var(--line);border-radius:12px;padding:5px 12px 5px 5px;color:var(--ink);flex:none;max-width:45%}
+.h-av{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex:none}
+.h-tec span:last-child{display:flex;flex-direction:column;text-align:left;min-width:0}
+.h-tec b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-tec small{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ok);font-weight:700}
+.h-tec small.off{color:var(--urg)}
+.h-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px max(20px,env(safe-area-inset-right,0px)) 18px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.h-sec{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px}
+.h-sec em{font-style:normal;color:var(--accent)}
+.resumen{gap:0}
+.etgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.etn{position:relative;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:14px 8px 12px;gap:6px;color:var(--ink);align-items:center;min-height:104px;justify-content:center}
+.etn:active{background:#40444B}
+.etn i{position:absolute;top:8px;left:10px;font-style:normal;font-size:11px;font-weight:800;color:var(--muted)}
+.etn b{font-size:38px;font-weight:700;color:var(--accent);line-height:1}
+.etn span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.etn.cero{background:var(--row2);border-color:var(--line)}
+.etn.cero b{color:var(--ok);opacity:.85}
+.etn.mucho{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.h-pasos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.h-pasos li{background:var(--row2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--muted)}
+.h-pasos li b{width:28px;height:28px;border-radius:8px;background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+.h-pasos strong{color:var(--ink)}
+.install{border:1px dashed var(--line);background:var(--row2);border-radius:14px;color:var(--muted)}
+.install b{color:var(--ink);font-weight:800}
+.h-bar{display:flex;gap:10px;padding:12px max(20px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:var(--bg)}
+.h-bar .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 12px;font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;min-height:54px}
+.h-bar .btn.primary{flex:2}
+.h-bar .btn svg{width:20px;height:20px;flex:none}
+.h-bar .linkbtn{flex:none;font-size:13px;text-transform:none;letter-spacing:0}
+.home{max-width:none}
+.h-head,.h-body,.h-bar{--pad:max(20px,calc((100% - 1180px) / 2))}
+.h-head{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
+.h-body{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
+.h-bar{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
+.h-tabla{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.h-th,.h-tr{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1.3fr) 110px;gap:12px;align-items:center;padding:0 16px}
+.h-th{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;padding-top:10px;padding-bottom:8px;background:var(--bg);border-bottom:1px solid var(--line)}
+.h-tr{width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--row);color:var(--ink);min-height:58px;padding-top:9px;padding-bottom:9px;font:inherit}
+.h-tr:nth-child(odd){background:var(--row2)}
+.h-tr:last-child{border-bottom:0}
+.h-tr:active{background:#40444B}
+.h-ob{display:flex;flex-direction:column;min-width:0}
+.h-ob b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-ob small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.h-et{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-et i{font-style:normal;width:24px;height:24px;border-radius:7px;background:var(--card);color:var(--accent);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.h-st{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.h-st i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.h-st.p{color:var(--accent)}.h-st.k{color:var(--ok)}
+.h-et .nc{display:none}
+@media (max-width:700px){.h-et .nc{display:inline}}
+.h-fe{font-family:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;font-size:13px;color:var(--muted);text-align:right}
+@media (max-width:700px){
+  .h-largo{display:none}
+  .h-et .nl{display:none}
+  .h-th{display:none}
+  .h-tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"ob fe" "et st";row-gap:6px;padding:12px 14px}
+  .h-ob{grid-area:ob}.h-fe{grid-area:fe;align-self:start}.h-et{grid-area:et}.h-st{grid-area:st;justify-self:end}
+
+  .h-head{gap:10px}.h-sep{display:none}.h-logo{height:20px}
+  .h-titulo{font-size:17px}.h-fecha{font-size:10px;letter-spacing:.12em}
+  .h-tec{padding:4px 8px 4px 4px}.h-tec span:last-child{display:none}
+  .etgrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .etn{grid-column:span 2;min-height:92px}
+  .etn:nth-child(4){grid-column:2 / span 2}
+  .h-pasos{grid-template-columns:1fr}
+}
+@media (max-width:370px){.etn b{font-size:30px}.h-bar .btn{font-size:13px}}
+@media (min-width:1000px){.etn{min-height:132px}.etn b{font-size:48px}.h-titulo{font-size:26px}}
 </style>
 </head>
 <body>
@@ -197,29 +300,38 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   <main class="stage" id="stage">
     <div class="empty" id="empty">
-      <div class="card">
-        <img class="brand" src="logo.png" alt="Automa" width="1340" height="265">
-        <h1>Marca el avance sobre el plano</h1>
-        <ol class="steps">
-          <li style="display:contents"><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
-          <li style="display:contents"><b>2</b><span>Elige la etapa y marca cada salida: <strong class="c-verde">bien</strong>, <strong style="color:var(--amarillo-ink)">detalle</strong> o <strong class="c-rojo">mal</strong>.</span></li>
-          <li style="display:contents"><b>3</b><span>Toca <strong>Guardar</strong> y el recorrido se sube a Odoo. Si no hay señal, se sube solo cuando vuelva el internet.</span></li>
-        </ol>
-
-        <div class="actions">
-          <button class="btn primary" id="planosBtn" type="button" hidden>Planos de obras</button>
+      <div class="home">
+        <header class="h-head">
+          <img class="h-logo" src="logo.png" alt="Automa" width="1340" height="265">
+          <i class="h-sep"></i>
+          <div class="h-tit"><div class="h-titulo">Recorridos<span class="h-largo"> de obra</span></div><div class="h-fecha" id="hFecha"></div></div>
+          <div class="h-tec" id="hTec"><span class="h-av" id="hAv">?</span><span><b id="hTecN">Técnico</b><small id="hNet">En línea</small></span></div>
+        </header>
+        <div class="h-body">
+          <div class="resumen" id="resumen" hidden></div>
+          <section id="obrasHome" hidden></section>
+          <section>
+            <div class="h-sec">Cómo funciona</div>
+            <ol class="h-pasos">
+              <li><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
+              <li><b>2</b><span>Elige la etapa y marca cada salida: <strong class="c-verde">bien</strong>, <strong style="color:var(--amarillo-ink)">detalle</strong> o <strong class="c-rojo">mal</strong>.</span></li>
+              <li><b>3</b><span>Toca <strong>Guardar</strong> y se sube a Odoo. Sin señal, se sube solo cuando vuelva el internet.</span></li>
+            </ol>
+          </section>
+          <div class="install" id="installHint" hidden>
+            <b>Instálala para usarla sin internet</b>
+            <span id="installTxt"></span>
+            <button class="btn primary" id="installBtn" type="button" hidden>Instalar app</button>
+          </div>
+        </div>
+        <nav class="h-bar actions">
+          <button class="btn primary" id="planosBtn" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>Planos de obras</button>
           <button class="btn" id="conectarBtn" type="button" hidden>Conectar con Odoo</button>
-          <button class="btn primary" id="openBtn" type="button" hidden>Abrir plano (PDF)</button>
-          <button class="btn" id="prevBtn" type="button" hidden>Cargar recorrido anterior</button>
+          <button class="btn" id="openBtn" type="button" hidden>Abrir PDF</button>
+          <button class="btn" id="prevBtn" type="button" hidden>Recorrido anterior</button>
           <button class="btn" id="histBtn" type="button" hidden>Mis recorridos</button>
           <button class="linkbtn" id="demoBtn" type="button" hidden>Probar con un plano de ejemplo</button>
-        </div>
-        <div class="resumen" id="resumen" hidden></div>
-        <div class="install" id="installHint" hidden>
-          <b>Instálala para usarla sin internet</b>
-          <span id="installTxt"></span>
-          <button class="btn primary" id="installBtn" type="button" hidden>Instalar app</button>
-        </div>
+        </nav>
       </div>
     </div>
     <div class="scroller" id="scroller" hidden>
@@ -268,7 +380,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 59;
+  const APP_VERSION = 60;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1487,13 +1599,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   }
   // Resumen en el inicio: un número por etapa = cuántas obras tienen trabajo pendiente en esa etapa.
   // Cada plano cuenta en una sola etapa: la que está en curso con pendientes, o la siguiente si ya terminó.
+  function pintarHome() {
+    try {
+      const f = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+      $("hFecha").textContent = f;
+      const t = (localStorage.getItem("automa-tecnico") || "").trim();
+      $("hTecN").textContent = t || "Técnico"; $("hAv").textContent = t ? t.split(/[\s,]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase() : "?";
+      const on = navigator.onLine !== false; $("hNet").textContent = on ? "En línea" : "Sin señal"; $("hNet").classList.toggle("off", !on);
+    } catch (e) {}
+  }
+  addEventListener("online", pintarHome); addEventListener("offline", pintarHome);
   async function pintarResumen() {
+    pintarHome();
     const box = $("resumen"); if (!box) return;
     let lista = null; try { lista = JSON.parse(localStorage.getItem("automa-cat") || "null"); } catch (e) {}
     if (!lista || !lista.length) { box.hidden = true; return; }
     const histAll = await DB.histAll();
     const por = {}; ETAPAS.forEach(e => por[e.n] = []);
-    for (const it of lista) for (const pl of (it.planos || [])) {
+    const obras = [];
+    for (const it of lista) { const ob = { it, et: 0, pend: 0, fecha: "" }; obras.push(ob); for (const pl of (it.planos || [])) {
       const recs = recsPlano(pl, histAll), ets = Object.keys(recs).map(Number);
       const et = ets.length ? Math.max(...ets) : 0, M = +it.etapa || 0;
       const h = et ? recs[et] : null;
@@ -1503,9 +1627,24 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       else if (!h) por[1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: "" });
       else if (!e.ok) por[et].push({ it, pl, txt: e.txt, pend: e.pend, fecha: h.meta.fecha });
       else if (etapaDe(et + 1)) por[et + 1].push({ it, pl, txt: "Por empezar", pend: 0, fecha: h.meta.fecha });
-    }
+      const cur = Math.max(et, M) || 1; ob.et = Math.max(ob.et, cur);
+      if (!(h && e && e.ok && !(M > et))) ob.pend++;
+      if (h && (h.meta.fecha || "") > ob.fecha) ob.fecha = h.meta.fecha || "";
+    } }
     box.hidden = false;
-    box.innerHTML = `<h2>Obras pendientes por etapa</h2><div class="etgrid">` + ETAPAS.map(e => `<button type="button" class="etn${por[e.n].length ? "" : " cero"}" data-n="${e.n}"><b>${por[e.n].length}</b><span>${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][e.n]}</span></button>`).join("") + `</div>`;
+    const tot = ETAPAS.reduce((a, e) => a + por[e.n].length, 0);
+    box.innerHTML = `<div class="h-sec"><span>Obras pendientes por etapa</span><em>${tot} en total</em></div><div class="etgrid">` + ETAPAS.map(e => `<button type="button" class="etn${por[e.n].length ? (por[e.n].length >= 5 ? " mucho" : "") : " cero"}" data-n="${e.n}"><i>${e.n}</i><b>${por[e.n].length}</b><span>${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][e.n]}</span></button>`).join("") + `</div>`;
+    const oh = $("obrasHome");
+    if (oh) {
+      obras.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || b.pend - a.pend);
+      oh.hidden = !obras.length;
+      oh.innerHTML = `<div class="h-sec"><span>Obras</span><em>${obras.length}</em></div><div class="h-tabla"><div class="h-th"><span>Obra</span><span>Etapa</span><span>Estado</span><span>Último</span></div>` +
+        obras.map((o, i) => `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.it.cliente_nombre || o.it.obra)}${o.it.concepto ? " · " + esc(o.it.concepto) : ""}</b><small>${esc(o.it.obra)} · ${esc(o.it.orden || "")}</small></span>` +
+          `<span class="h-et"><i>${o.et}</i><span class="nl">${esc(etapaDe(o.et) ? etapaDe(o.et).nombre : "")}</span><span class="nc">${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][o.et] || ""}</span></span>` +
+          `<span class="h-st ${o.pend ? "p" : "k"}"><i></i>${o.pend ? o.pend + " plano" + (o.pend > 1 ? "s" : "") + " pendiente" + (o.pend > 1 ? "s" : "") : "Al día"}</span>` +
+          `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`).join("") + `</div>`;
+      oh.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const base = planosBase(); if (base) elegirPlano(obras[+x.dataset.o].it, base); });
+    }
     box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
       const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
       sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${filas.length ? `${filas.length} obra${filas.length > 1 ? "s" : ""} pendiente${filas.length > 1 ? "s" : ""}` : "No hay obras pendientes en esta etapa."}</p>
@@ -1658,7 +1797,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function planosBase() {
     try { const v = localStorage.getItem(PLANOS_KEY), o = getOdoo(); if (!v || !o) return null; return { origin: new URL(o).origin, id: v.split(":")[0], token: v.split(":")[1] }; } catch (e) { return null; }
   }
-  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = !on; $("conectarBtn").hidden = on; $("openBtn").classList.toggle("primary", !on); }
+  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = !on; $("conectarBtn").hidden = on; $("openBtn").classList.toggle("primary", !on); $("openBtn").hidden = on; }
   // Cada navegador (Safari, Chrome, la app en inicio) guarda su propia conexión: se conecta una vez con el enlace de Odoo.
   $("conectarBtn").onclick = () => sheet(`
       <h2>Conectar con Odoo</h2>
