@@ -403,7 +403,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 64;
+  const APP_VERSION = 65;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
@@ -2001,6 +2001,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const conBytes = async (h, n) => {
       if (!h || !h.odoo) return h;
       const r = await ultimoDeOdoo(pl, h.odoo, base, "r" + pl.id + "e" + n); $("busy").hidden = true;
+      // Recorridos de antes de las etapas (pasaron a Etapa 1): el azul "Cableado OK" cuenta como bien.
+      if (r && r.marks) r.marks.forEach(m => { if (m.st === "azul") m.st = "verde"; });
       return r ? { bytes: r.bytes, marks: r.marks, meta: { fecha: h.odoo.fecha || r.fecha, tecnico: h.odoo.tecnico || r.tecnico, obra: r.obra, etapa: n } } : null;
     };
     // Etapa que sigue: la última con recorrido (si ya quedó toda bien, la siguiente) o la que pusieron en Odoo.
