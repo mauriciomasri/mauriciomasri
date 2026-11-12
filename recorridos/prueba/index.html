@@ -409,7 +409,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 66;
+  const APP_VERSION = 68;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
@@ -444,7 +444,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function recsPlano(pl, histAll) {
     const out = {};
     for (const e of ETAPAS) {
-      const loc = histAll.filter(h => h.meta.plano_id === pl.id && h.meta.etapa === e.n).sort((a, b) => b.savedAt - a.savedAt)[0];
+      const loc = histAll.filter(h => h.meta.plano_id === pl.id && (h.meta.etapa || 1) === e.n).sort((a, b) => b.savedAt - a.savedAt)[0];
       const od = pl.etapas && pl.etapas[e.n];
       if (od && (!loc || (od.fecha || "") > (loc.meta.fecha || ""))) out[e.n] = { odoo: od, meta: { fecha: od.fecha, tecnico: od.tecnico, etapa: e.n, guardado: od.guardado || "" }, cnt: od };
       else if (loc) out[e.n] = loc;
@@ -507,7 +507,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   // Fecha del teléfono (hora local). Antes salía en UTC y después de las 6 pm en México marcaba el día siguiente.
   function today() { const d = new Date(), z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; }
-  function fmtFecha(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
+  function fmtFecha(iso) { if (!iso) return ""; const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
   // Fecha y hora de la última vez que se guardó (número de este equipo, o texto UTC de Odoo "AAAA-MM-DD HH:MM:SS").
   function fmtHora(x) {
     if (!x) return "";
@@ -1704,7 +1704,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       oh.hidden = !obras.length;
       const abierto = oh.dataset.abierto === "1";
       oh.innerHTML = `<button type="button" class="h-toggle" id="obrasTgl" aria-expanded="${abierto}"><span class="h-tg-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span><span class="h-tg-t"><b>Obras</b><small>${obras.length} obra${obras.length === 1 ? "" : "s"} · ${obras.filter(o => o.pend).length} con pendientes</small></span><span class="h-tg-f">›</span></button><div class="h-tabla"${abierto ? "" : " hidden"}><div class="h-th"><span>Obra</span><span>Etapa</span><span>Estado</span><span>Último</span></div>` +
-        obras.map((o, i) => `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.it.cliente_nombre || o.it.obra)}${o.it.concepto ? " · " + esc(o.it.concepto) : ""}</b><small>${esc(o.it.obra)} · ${esc(o.it.orden || "")}</small></span>` +
+        obras.map((o, i) => `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.it.obra || o.it.cliente_nombre)}</b><small>${o.it.concepto ? esc(o.it.concepto) + " · " : ""}${esc(o.it.orden || "")}</small></span>` +
           `<span class="h-et"><i>${o.et}</i><span class="nl">${esc(etapaDe(o.et) ? etapaDe(o.et).nombre : "")}</span><span class="nc">${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][o.et] || ""}</span></span>` +
           `<span class="h-st ${o.pend ? "p" : "k"}"><i></i>${o.pend ? o.pend + " plano" + (o.pend > 1 ? "s" : "") + " pendiente" + (o.pend > 1 ? "s" : "") : "Al día"}</span>` +
           `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`).join("") + `</div>`;
@@ -1712,7 +1712,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const filtra = () => {
         const q = norm($("hBuscar").value.trim()); let n = 0;
-        oh.querySelectorAll("[data-o]").forEach(x => { const it = obras[+x.dataset.o].it; const ok = !q || norm([it.cliente_nombre, it.obra, it.orden, it.concepto, it.cliente].join(" ")).includes(q); x.hidden = !ok; if (ok) n++; });
+        oh.querySelectorAll("[data-o]").forEach(x => { const it = obras[+x.dataset.o].it; const ok = !q || norm([it.cliente_nombre, it.obra, it.orden, it.concepto, it.cliente].concat((it.planos || []).map(p => p.archivo || "")).join(" ")).includes(q); x.hidden = !ok; if (ok) n++; });
         const tb = oh.querySelector(".h-tabla"); if (q) tb.hidden = false; else tb.hidden = oh.dataset.abierto !== "1";
         $("obrasTgl").setAttribute("aria-expanded", !tb.hidden);
         let nada = oh.querySelector(".h-nada"); if (!nada) { nada = document.createElement("p"); nada.className = "note h-nada"; tb.after(nada); }
@@ -1725,28 +1725,29 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
       const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
       sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${filas.length ? `${filas.length} obra${filas.length > 1 ? "s" : ""} pendiente${filas.length > 1 ? "s" : ""}` : "No hay obras pendientes en esta etapa."}</p>
-        <div class="hlist">${filas.map((f, i) => `<div class="hrow et-pend"><div class="hinfo"><b>${esc(f.it.cliente_nombre || f.it.obra)}${f.it.concepto ? " · " + esc(f.it.concepto) : ""}</b><span>${esc(f.pl.tipo)} · ${esc(f.txt)}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => {
+        <div class="hlist">${filas.map((f, i) => `<div class="hrow et-pend"><div class="hinfo"><b>${esc(f.it.obra || f.it.cliente_nombre)}</b><span>${f.it.concepto ? esc(f.it.concepto) + " · " : ""}${esc(f.pl.tipo)} · ${esc(f.txt)}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => {
         $("sheetHost").querySelectorAll("[data-i]").forEach(x => x.onclick = () => { const f = filas[+x.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
       });
     });
   }
   async function paintHistBtn() {
     pintarResumen();
-    const n = (await DB.histAll()).length, b = $("histBtn");
-    // El botón ya no se muestra: los recorridos se retoman desde Planos de obras. La copia local se sigue usando ahí (y sin señal).
-    b.hidden = true; b.textContent = `Mis recorridos (${n})`;
+    // Solo se muestra si en este aparato hay recorridos de antes que no están ligados a ningún plano de Odoo.
+    const n = (await DB.histAll()).filter(h => !h.meta.plano_id).length, b = $("histBtn");
+    b.hidden = !n; b.textContent = `Recorridos anteriores (${n})`;
   }
   async function openHist() {
-    const all = (await DB.histAll()).sort((a, b) => (b.meta.fecha || "").localeCompare(a.meta.fecha || "") || b.savedAt - a.savedAt);
+    const all = (await DB.histAll()).filter(h => !h.meta.plano_id).sort((a, b) => (b.meta.fecha || "").localeCompare(a.meta.fecha || "") || b.savedAt - a.savedAt);
     const row = h => `<div class="hrow">
         <div class="hinfo"><b>${esc(h.meta.obra || "Obra")}</b><span>${h.meta.plano ? esc(h.meta.plano) + " · " : ""}${fmtFecha(h.meta.fecha)} · ${esc(h.meta.tecnico || "")}</span>
           <span class="hcnt"><i class="c-rojo">●${h.counts.rojo}</i> <i class="c-amarillo">●${h.counts.amarillo}</i> <i class="c-azul">●${h.counts.azul}</i> <i class="c-verde">●${h.counts.verde}</i></span></div>
-        <button type="button" class="btn primary" data-open="${esc(h.rid)}">Abrir</button>
+        <button type="button" class="btn primary" data-asig="${esc(h.rid)}">Pasar a su obra</button>
         <button type="button" class="btn danger" data-del="${esc(h.rid)}" aria-label="Borrar de este celular">✕</button>
       </div>`;
-    sheet(`<h2>Mis recorridos</h2>
-      <p class="note">Recorridos enviados desde este celular. Ábrelos para corregirlos o para hacer el siguiente recorrido de esa obra.</p>
+    sheet(`<h2>Recorridos anteriores</h2>
+      <p class="note">Recorridos hechos en este aparato antes de conectar con Odoo. Pásalos a su obra y quedan como Etapa 1, con sus marcas y fotos.</p>
       <div class="hlist">${all.map(row).join("") || '<p class="note">Todavía no hay recorridos.</p>'}</div>`, () => {
+      $("sheetHost").querySelectorAll("[data-asig]").forEach(b => b.onclick = () => asignarHist(all.find(x => x.rid === b.dataset.asig)));
       $("sheetHost").querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
         const h = all.find(x => x.rid === b.dataset.open); if (!h) return;
         closeSheet(); $("busy").hidden = false;
@@ -1756,6 +1757,29 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "¿Borrar?"; return; }
         await DB.histDel(b.dataset.del); paintHistBtn(); closeSheet(); openHist();
       });
+    });
+  }
+  // Liga un recorrido de antes a un plano del catálogo: queda como Etapa 1 de ese plano.
+  function asignarHist(h) {
+    if (!h) return;
+    let cat = []; try { cat = JSON.parse(localStorage.getItem("automa-cat") || "[]"); } catch (e) {}
+    const ops = [];
+    cat.forEach(it => (it.planos || []).forEach(pl => ops.push({ it, pl })));
+    const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const pinta = q => ops.map((o, i) => ({ o, i })).filter(({ o }) => !q || norm([o.it.obra, o.it.cliente_nombre, o.it.orden, o.it.concepto, o.pl.tipo, o.pl.archivo].join(" ")).includes(q))
+      .map(({ o, i }) => `<div class="hrow"><div class="hinfo"><b>${esc(o.it.obra || o.it.cliente_nombre)}</b><span>${esc(o.pl.tipo)} · ${esc(o.it.orden || "")}${o.pl.archivo ? " · " + esc(o.pl.archivo) : ""}</span></div><button type="button" class="btn primary" data-pl="${i}">Elegir</button></div>`).join("") || '<p class="note">No hay ningún plano con ese nombre.</p>';
+    sheet(`<button type="button" class="linkbtn" id="asVolver">‹ Volver</button><h2>¿De qué obra es?</h2>
+      <p class="note">${esc(h.meta.obra || "Recorrido")}${h.meta.fecha ? " · " + fmtFecha(h.meta.fecha) : ""}${h.meta.tecnico ? " · " + esc(h.meta.tecnico) : ""}</p>
+      <div class="field buscar"><input id="asBuscar" type="search" placeholder="Buscar obra o plano" autocomplete="off" enterkeyhint="search"></div>
+      <div class="hlist" id="asLista"></div>`, () => {
+      const lst = $("asLista"), inp = $("asBuscar");
+      const go = () => { lst.innerHTML = pinta(norm(inp.value.trim())); lst.querySelectorAll("[data-pl]").forEach(b => b.onclick = async () => {
+        const { it, pl } = ops[+b.dataset.pl];
+        h.meta = { ...h.meta, obra: it.obra, order_id: it.order_id, plano_id: pl.id, plano: pl.tipo, etapa: h.meta.etapa || 1 };
+        await DB.histPut(h.rid, h); closeSheet(); paintHistBtn(); toast("Listo: quedó en Etapa 1 de " + (it.obra || "la obra"));
+      }); };
+      inp.oninput = go; go();
+      $("asVolver").onclick = () => { closeSheet(); openHist(); };
     });
   }
   $("histBtn").onclick = openHist;
@@ -1942,11 +1966,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const guardados = {};
     for (const it of lista) { let n = 0; for (const pl of it.planos) { const c = await DB.planGet("p" + pl.id); if (c && c.v === pl.v) n++; } guardados[it.order_id] = n; }
     // Primero los clientes; dentro, sus órdenes con la referencia interna (concepto); al picar la orden se abre el plano.
-    const cliOf = it => it.cliente_nombre || it.obra || it.cliente || "Sin cliente";
+    const cliOf = it => it.obra || it.cliente_nombre || it.cliente || "Sin cliente";
     const grupos = [];
     for (const it of lista) { const k = cliOf(it); let g = grupos.find(x => x.k === k); if (!g) grupos.push(g = { k, items: [] }); g.items.push(it); }
     grupos.sort((a, b) => a.k.localeCompare(b.k, "es"));
-    const qOf = it => sinAcentos([cliOf(it), it.obra, it.orden, it.concepto || "", it.cliente].join(" "));
+    const qOf = it => sinAcentos([cliOf(it), it.obra, it.orden, it.concepto || "", it.cliente].concat((it.planos || []).map(p => p.archivo || "")).join(" "));
     const nPl = items => items.reduce((n, it) => n + it.planos.length, 0);
     const nGu = items => items.reduce((n, it) => n + (guardados[it.order_id] || 0), 0);
     const verCliente = g => {
