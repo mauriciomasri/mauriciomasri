@@ -406,7 +406,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 68;
+  const APP_VERSION = 69;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1678,7 +1678,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     const histAll = await DB.histAll();
     const por = {}; ETAPAS.forEach(e => por[e.n] = []);
     const obras = [];
-    for (const it of lista) { const ob = { it, et: 0, pend: 0, fecha: "" }; obras.push(ob); for (const pl of (it.planos || [])) {
+    const grupos = {};
+    for (const it of lista) {
+      const k = (it.obra || it.cliente_nombre || it.cliente || it.orden || "").trim() || it.orden;
+      let g = grupos[k]; if (!g) { g = grupos[k] = { k, items: [], et: 0, pend: 0, fecha: "", npl: 0 }; obras.push(g); }
+      g.items.push(it); g.npl += (it.planos || []).length;
+    }
+    for (const g of obras) for (const it of g.items) { const ob = g; for (const pl of (it.planos || [])) {
       const recs = recsPlano(pl, histAll), ets = Object.keys(recs).map(Number);
       const et = ets.length ? Math.max(...ets) : 0, M = +it.etapa || 0;
       const h = et ? recs[et] : null;
@@ -1701,15 +1707,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       oh.hidden = !obras.length;
       const abierto = oh.dataset.abierto === "1";
       oh.innerHTML = `<button type="button" class="h-toggle" id="obrasTgl" aria-expanded="${abierto}"><span class="h-tg-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span><span class="h-tg-t"><b>Obras</b><small>${obras.length} obra${obras.length === 1 ? "" : "s"} · ${obras.filter(o => o.pend).length} con pendientes</small></span><span class="h-tg-f">›</span></button><div class="h-tabla"${abierto ? "" : " hidden"}><div class="h-th"><span>Obra</span><span>Etapa</span><span>Estado</span><span>Último</span></div>` +
-        obras.map((o, i) => `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.it.obra || o.it.cliente_nombre)}</b><small>${o.it.concepto ? esc(o.it.concepto) + " · " : ""}${esc(o.it.orden || "")}</small></span>` +
+        obras.map((o, i) => { const uno = o.items.length === 1 ? o.items[0] : null; const sub = uno ? ((uno.concepto ? esc(uno.concepto) + " · " : "") + esc(uno.orden || "")) : (o.items.length + " órdenes · " + o.npl + " plano" + (o.npl > 1 ? "s" : "")); return `<button type="button" class="h-tr" data-o="${i}"><span class="h-ob"><b>${esc(o.k)}</b><small>${sub}</small></span>` +
           `<span class="h-et"><i>${o.et}</i><span class="nl">${esc(etapaDe(o.et) ? etapaDe(o.et).nombre : "")}</span><span class="nc">${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][o.et] || ""}</span></span>` +
           `<span class="h-st ${o.pend ? "p" : "k"}"><i></i>${o.pend ? o.pend + " plano" + (o.pend > 1 ? "s" : "") + " pendiente" + (o.pend > 1 ? "s" : "") : "Al día"}</span>` +
-          `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`).join("") + `</div>`;
+          `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`; }).join("") + `</div>`;
       // Buscador: filtra las obras (sin acentos) y abre la lista mientras se busca.
       const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const filtra = () => {
         const q = norm($("hBuscar").value.trim()); let n = 0;
-        oh.querySelectorAll("[data-o]").forEach(x => { const it = obras[+x.dataset.o].it; const ok = !q || norm([it.cliente_nombre, it.obra, it.orden, it.concepto, it.cliente].concat((it.planos || []).map(p => p.archivo || "")).join(" ")).includes(q); x.hidden = !ok; if (ok) n++; });
+        oh.querySelectorAll("[data-o]").forEach(x => { const g = obras[+x.dataset.o]; const ok = !q || g.items.some(it => norm([g.k, it.cliente_nombre, it.obra, it.orden, it.concepto, it.cliente].concat((it.planos || []).map(p => p.archivo || "")).join(" ")).includes(q)); x.hidden = !ok; if (ok) n++; });
         const tb = oh.querySelector(".h-tabla"); if (q) tb.hidden = false; else tb.hidden = oh.dataset.abierto !== "1";
         $("obrasTgl").setAttribute("aria-expanded", !tb.hidden);
         let nada = oh.querySelector(".h-nada"); if (!nada) { nada = document.createElement("p"); nada.className = "note h-nada"; tb.after(nada); }
@@ -1717,7 +1723,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       };
       $("hBuscaBox").hidden = !obras.length; $("hBuscar").oninput = filtra; if ($("hBuscar").value) filtra();
       $("obrasTgl").onclick = () => { const a = oh.dataset.abierto !== "1"; oh.dataset.abierto = a ? "1" : ""; oh.querySelector(".h-tabla").hidden = !a; $("obrasTgl").setAttribute("aria-expanded", a); };
-      oh.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const base = planosBase(); if (base) elegirPlano(obras[+x.dataset.o].it, base); });
+      oh.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const base = planosBase(); if (!base) return; const g = obras[+x.dataset.o]; if (g.items.length === 1) { elegirPlano(g.items[0], base); return; } const rows = []; g.items.forEach(it => (it.planos || []).forEach(pl => rows.push({ it, pl }))); sheet(`<h2>${esc(g.k)}</h2><p class="note">${g.items.length} órdenes · ${rows.length} plano${rows.length > 1 ? "s" : ""}. Elige cuál vas a recorrer.</p><div class="hlist">${rows.map((r, i) => `<div class="hrow"><div class="hinfo"><b>${esc(r.pl.tipo)}</b><span>${esc(r.it.orden || "")}${r.it.concepto ? " · " + esc(r.it.concepto) : ""}${r.pl.archivo ? " · " + esc(r.pl.archivo) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => { $("sheetHost").querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const r = rows[+b.dataset.i]; abrirPlano(r.it, r.pl, base); }); }); });
     }
     box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
       const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
