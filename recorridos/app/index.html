@@ -251,6 +251,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .h-body{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
 .h-bar{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
 .h-tabla{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
+.h-busca{display:flex;align-items:center;gap:10px;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:0 14px;min-height:50px;box-shadow:0 1px 2px rgba(16,24,40,.05);color:var(--muted)}
+.h-busca:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.h-busca svg{width:20px;height:20px;flex:none}
+.h-busca input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);outline:none;padding:12px 0}
+.h-tr[hidden]{display:none}
 .h-toggle{width:100%;display:flex;align-items:center;gap:12px;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:12px 16px;color:var(--ink);text-align:left;min-height:62px}
 .h-toggle:active{background:#E8EDF3}
 .h-toggle[aria-expanded="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -329,6 +334,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         </header>
         <div class="h-body">
           <div class="resumen" id="resumen" hidden></div>
+          <div class="h-busca" id="hBuscaBox" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="hBuscar" type="search" placeholder="Buscar obra, cliente u orden" autocomplete="off" enterkeyhint="search"></div>
           <section id="obrasHome" hidden></section>
           <section>
             <div class="h-sec">Cómo funciona</div>
@@ -400,7 +406,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 65;
+  const APP_VERSION = 66;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1699,6 +1705,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           `<span class="h-et"><i>${o.et}</i><span class="nl">${esc(etapaDe(o.et) ? etapaDe(o.et).nombre : "")}</span><span class="nc">${["", "Tuberías", "Cableado", "Ubicaciones", "Supervisión", "Instalación"][o.et] || ""}</span></span>` +
           `<span class="h-st ${o.pend ? "p" : "k"}"><i></i>${o.pend ? o.pend + " plano" + (o.pend > 1 ? "s" : "") + " pendiente" + (o.pend > 1 ? "s" : "") : "Al día"}</span>` +
           `<span class="h-fe">${o.fecha ? fmtFecha(o.fecha) : "—"}</span></button>`).join("") + `</div>`;
+      // Buscador: filtra las obras (sin acentos) y abre la lista mientras se busca.
+      const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const filtra = () => {
+        const q = norm($("hBuscar").value.trim()); let n = 0;
+        oh.querySelectorAll("[data-o]").forEach(x => { const it = obras[+x.dataset.o].it; const ok = !q || norm([it.cliente_nombre, it.obra, it.orden, it.concepto, it.cliente].join(" ")).includes(q); x.hidden = !ok; if (ok) n++; });
+        const tb = oh.querySelector(".h-tabla"); if (q) tb.hidden = false; else tb.hidden = oh.dataset.abierto !== "1";
+        $("obrasTgl").setAttribute("aria-expanded", !tb.hidden);
+        let nada = oh.querySelector(".h-nada"); if (!nada) { nada = document.createElement("p"); nada.className = "note h-nada"; tb.after(nada); }
+        nada.textContent = "No hay ninguna obra con ese nombre."; nada.hidden = !q || n > 0;
+      };
+      $("hBuscaBox").hidden = !obras.length; $("hBuscar").oninput = filtra; if ($("hBuscar").value) filtra();
       $("obrasTgl").onclick = () => { const a = oh.dataset.abierto !== "1"; oh.dataset.abierto = a ? "1" : ""; oh.querySelector(".h-tabla").hidden = !a; $("obrasTgl").setAttribute("aria-expanded", a); };
       oh.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const base = planosBase(); if (base) elegirPlano(obras[+x.dataset.o].it, base); });
     }
