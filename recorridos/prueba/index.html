@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Recorridos · PRUEBA</title>
-<meta name="theme-color" content="#2B2E34">
+<meta name="theme-color" content="#EEF0F3">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../app/icons/icon-192.png">
 <link rel="apple-touch-icon" href="../app/icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Prueba Rec">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 @font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(../app/fonts/barlow-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Barlow";font-weight:500 600;font-display:swap;src:url(../app/fonts/barlow-latin-600-normal.woff2) format("woff2")}
@@ -176,14 +176,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .quickfoto{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#2b3440;color:#fff;border:0;border-radius:999px;padding:12px 20px;font-family:var(--f-label);font-weight:700;font-size:17px;box-shadow:0 2px 10px rgba(0,0,0,.25);white-space:nowrap}
 .sheet .stack{display:flex;flex-direction:column;gap:10px}
 .sheet .stack .btn{padding:14px;font-size:16px}
-/* ===== v60 · diseño Actividades: grafito + naranja ===== */
+/* ===== v64 · diseño Actividades: claro + azul ===== */
 :root,:root[data-theme],:root:not([data-theme="light"]){
-  --bg:#2B2E34; --panel:#33373D; --row:#35393F; --row2:#31353B; --card:#3A3E45; --ink:#F7F8FA; --muted:#A3A8B1; --line:#41454C;
-  --accent:#FF7A45; --accent-ink:#FFFFFF; --plan:#24272C; --amarillo-ink:#FFC94D; --azul:#5B9BF0;
-  --ok:#4BE0A0; --urg:#FF5A6E;
+  --bg:#EEF0F3; --panel:#FFFFFF; --row:#FFFFFF; --row2:#F6F7F9; --card:#EAF2FB; --ink:#1E2024; --muted:#6B7280; --line:#DFE3E8;
+  --accent:#2F7FD1; --accent-ink:#FFFFFF; --plan:#E3E8EE; --amarillo-ink:#9A6B00; --azul:#1565c0;
+  --rojo:#E0334A; --verde:#1E9E58; --amarillo:#E0A100;
+  --ok:#1E9E58; --urg:#E0334A;
   --f-body:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --f-label:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  color-scheme:dark}
+  color-scheme:light}
 .mono,.etn b,.h-reloj{font-family:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace}
 .top{background:var(--bg);border-bottom:2px solid var(--accent)}
 .top .obra{font-weight:800;letter-spacing:.01em}
@@ -191,7 +192,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .sheet{background:var(--panel);border:1px solid var(--line);border-bottom:0}
 .sheet h2{font-weight:800;letter-spacing:.01em}
-.scrim{background:rgba(20,22,26,.72)}
+.scrim{background:rgba(16,24,40,.45)}
 .hrow{background:var(--row);border-color:var(--line)}
 .hrow.et-ok{border-color:color-mix(in srgb,var(--ok) 60%,var(--line));background:color-mix(in srgb,var(--ok) 8%,var(--row))}
 .hrow.et-ok .hinfo span{color:var(--ok)}
@@ -205,10 +206,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .linkbtn{color:var(--accent)}
 /* Inicio */
 .app:has(#empty:not([hidden])) .top{display:none}
-.empty{padding:0;display:block;overflow:hidden}
+.empty{padding:0;display:block;overflow:hidden;background:var(--bg)}
 .home{height:100%;display:flex;flex-direction:column;max-width:1180px;margin:0 auto}
 .h-head{display:flex;align-items:center;gap:14px;padding:calc(14px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) 12px max(20px,env(safe-area-inset-left,0px));border-bottom:2px solid var(--accent)}
-.h-logo{height:26px;width:auto;filter:invert(1) hue-rotate(180deg);mix-blend-mode:screen;flex:none}
+.h-logo{height:26px;width:auto;flex:none}
 .h-sep{width:1px;height:30px;background:var(--line);flex:none}
 .h-tit{min-width:0;flex:1}
 .h-titulo{font-size:22px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -225,11 +226,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .resumen{gap:0}
 .etgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .etn{position:relative;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:14px 8px 12px;gap:6px;color:var(--ink);align-items:center;min-height:104px;justify-content:center}
-.etn:active{background:#40444B}
+.etn:active{background:#E8EDF3}
 .etn i{position:absolute;top:8px;left:10px;font-style:normal;font-size:11px;font-weight:800;color:var(--muted)}
 .etn b{font-size:38px;font-weight:700;color:var(--accent);line-height:1}
 .etn span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .etn.cero{background:var(--row2);border-color:var(--line)}
+.etn,.h-toggle,.h-tabla,.h-tec,.hrow,.h-pasos li{box-shadow:0 1px 2px rgba(16,24,40,.05)}
 .etn.cero b{color:var(--ok);opacity:.85}
 .etn.mucho{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .h-pasos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
@@ -250,7 +252,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .h-bar{padding-left:max(var(--pad),env(safe-area-inset-left,0px));padding-right:max(var(--pad),env(safe-area-inset-right,0px))}
 .h-tabla{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px}
 .h-toggle{width:100%;display:flex;align-items:center;gap:12px;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:12px 16px;color:var(--ink);text-align:left;min-height:62px}
-.h-toggle:active{background:#40444B}
+.h-toggle:active{background:#E8EDF3}
 .h-toggle[aria-expanded="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .h-tg-i{width:38px;height:38px;border-radius:10px;background:var(--card);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
 .h-tg-i svg{width:20px;height:20px}
@@ -264,7 +266,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .h-tr{width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--row);color:var(--ink);min-height:58px;padding-top:9px;padding-bottom:9px;font:inherit}
 .h-tr:nth-child(odd){background:var(--row2)}
 .h-tr:last-child{border-bottom:0}
-.h-tr:active{background:#40444B}
+.h-tr:active{background:#E8EDF3}
 .h-ob{display:flex;flex-direction:column;min-width:0}
 .h-ob b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .h-ob small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
@@ -401,7 +403,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 63;
+  const APP_VERSION = 64;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
