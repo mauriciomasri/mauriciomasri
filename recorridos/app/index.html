@@ -330,11 +330,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <img class="h-logo" src="logo.png" alt="Automa" width="1340" height="265">
           <i class="h-sep"></i>
           <div class="h-tit"><div class="h-titulo">Recorridos<span class="h-largo"> de obra</span></div><div class="h-fecha" id="hFecha"></div></div>
+          <div class="h-busca" id="hBuscaBox" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="hBuscar" type="search" placeholder="Buscar obra, cliente u orden" autocomplete="off" enterkeyhint="search"></div>
           <div class="h-tec" id="hTec"><span class="h-av" id="hAv">?</span><span><b id="hTecN">Técnico</b><small id="hNet">En línea</small></span></div>
         </header>
         <div class="h-body">
           <div class="resumen" id="resumen" hidden></div>
-          <div class="h-busca" id="hBuscaBox" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="hBuscar" type="search" placeholder="Buscar obra, cliente u orden" autocomplete="off" enterkeyhint="search"></div>
           <section id="obrasHome" hidden></section>
           <section>
             <div class="h-sec">Cómo funciona</div>
@@ -406,7 +406,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 69;
+  const APP_VERSION = 70;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -1728,8 +1728,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     box.querySelectorAll(".etn").forEach(b => b.onclick = () => {
       const n = +b.dataset.n, filas = por[n].sort((a, c) => c.pend - a.pend || (c.fecha || "").localeCompare(a.fecha || ""));
       sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${filas.length ? `${filas.length} obra${filas.length > 1 ? "s" : ""} pendiente${filas.length > 1 ? "s" : ""}` : "No hay obras pendientes en esta etapa."}</p>
-        <div class="hlist">${filas.map((f, i) => `<div class="hrow et-pend"><div class="hinfo"><b>${esc(f.it.obra || f.it.cliente_nombre)}</b><span>${f.it.concepto ? esc(f.it.concepto) + " · " : ""}${esc(f.pl.tipo)} · ${esc(f.txt)}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`).join("")}</div>`, () => {
+        ${filas.length > 3 ? `<div class="field buscar"><input id="etBuscar" type="search" placeholder="Buscar obra, cliente u orden" autocomplete="off" enterkeyhint="search"><p class="note" id="etNada" hidden>No hay ninguna obra con ese nombre.</p></div>` : ""}
+        <div class="hlist" id="etLista">${filas.map((f, i) => ((it => { const np = (it.planos || []).length; const mostrarConcepto = it.concepto && it.concepto !== f.pl.tipo; return `<div class="hrow et-pend" data-fi="${i}"><div class="hinfo"><b>${esc(it.obra || it.cliente_nombre)}</b><span>${mostrarConcepto ? esc(it.concepto) + " · " : ""}${esc(f.pl.tipo)} · ${np} plano${np > 1 ? "s" : ""}${f.fecha ? " · " + fmtFecha(f.fecha) : ""}</span></div><button type="button" class="btn primary" data-i="${i}">Abrir</button></div>`; })(f.it))).join("")}</div>`, () => {
         $("sheetHost").querySelectorAll("[data-i]").forEach(x => x.onclick = () => { const f = filas[+x.dataset.i], base = planosBase(); if (base) abrirPlano(f.it, f.pl, base); });
+        const inp = $("etBuscar"); if (inp) { const nrm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); inp.oninput = () => { const q = nrm(inp.value.trim()); let vis = 0; $("sheetHost").querySelectorAll("[data-fi]").forEach(r => { const f = filas[+r.dataset.fi]; const ok = !q || nrm([f.it.obra, f.it.cliente_nombre, f.it.orden, f.it.concepto, f.it.cliente, f.pl.tipo, f.pl.archivo].join(" ")).includes(q); r.hidden = !ok; if (ok) vis++; }); const nd = $("etNada"); if (nd) nd.hidden = !q || vis > 0; }; }
       });
     });
   }
