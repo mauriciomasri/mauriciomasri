@@ -244,6 +244,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .h-bar .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 12px;font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;min-height:54px}
 .h-bar .btn.primary{flex:2}
 .h-bar .btn svg{width:20px;height:20px;flex:none}
+.h-bar:not(:has(.btn:not([hidden]),.linkbtn:not([hidden]))){display:none}
 .h-bar .linkbtn{flex:none;font-size:13px;text-transform:none;letter-spacing:0}
 .home{max-width:none}
 .h-head,.h-body,.h-bar{--pad:max(20px,calc((100% - 1180px) / 2))}
@@ -339,14 +340,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <div class="h-busca" id="hBuscaBox" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="hBuscar" type="search" placeholder="Buscar obra, cliente u orden" autocomplete="off" enterkeyhint="search"></div>
           <div class="resumen" id="resumen" hidden></div>
           <section id="obrasHome" hidden></section>
-          <section>
-            <div class="h-sec">Cómo funciona</div>
-            <ol class="h-pasos">
-              <li><b>1</b><span>Abre el plano de la obra en <strong>Planos de obras</strong>.</span></li>
-              <li><b>2</b><span>Elige la etapa y marca cada salida: <strong class="c-verde">bien</strong>, <strong style="color:var(--amarillo-ink)">detalle</strong> o <strong class="c-rojo">mal</strong>.</span></li>
-              <li><b>3</b><span>Toca <strong>Guardar</strong>. En esta prueba no se sube a Odoo: se descarga el PDF.</span></li>
-            </ol>
-          </section>
           <div class="install" id="installHint" hidden>
             <b>Instálala para usarla sin internet</b>
             <span id="installTxt"></span>
@@ -409,7 +402,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 71;
+  const APP_VERSION = 73;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
@@ -1921,7 +1914,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   function planosBase() {
     try { const v = localStorage.getItem(PLANOS_KEY), o = getOdoo(); if (!v || !o) return null; return { origin: new URL(o).origin, id: v.split(":")[0], token: v.split(":")[1] }; } catch (e) { return null; }
   }
-  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = !on; $("conectarBtn").hidden = on; $("openBtn").classList.toggle("primary", !on); $("openBtn").hidden = on; }
+  function paintPlanosBtn() { const on = !!planosBase(); $("planosBtn").hidden = true; $("conectarBtn").hidden = on; $("openBtn").classList.toggle("primary", !on); $("openBtn").hidden = on; }
   // Cada navegador (Safari, Chrome, la app en inicio) guarda su propia conexión: se conecta una vez con el enlace de Odoo.
   $("conectarBtn").onclick = () => sheet(`
       <h2>Conectar con Odoo</h2>
