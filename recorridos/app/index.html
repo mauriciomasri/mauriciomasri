@@ -129,6 +129,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .btn.undo{display:flex;align-items:center;gap:4px}
 .btn.undo .ui{font-size:18px;line-height:1}
 .btn.undo:disabled{opacity:.4}
+#notasBtn.on{border-color:#c98a00;background:#fff7e0}
+.notaPrev{background:#fff7e0;border:1px solid #e8c766;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:15px;line-height:1.4;color:#5b4300}
 @media (max-width:420px){.btn.undo .ut{display:none}}
 .toast.act{pointer-events:auto;display:flex;gap:14px;align-items:center}
 .toast.act button{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;padding:0;filter:brightness(1.5)}
@@ -320,6 +322,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <span class="c-porrev" id="nPx" hidden><i class="dot" style="border-style:dashed"></i><b id="nP">0</b></span>
     </div>
     <button class="pendpill" id="pendPill" type="button" hidden></button>
+    <button class="btn undo" id="notasBtn" type="button" hidden aria-label="Notas para la siguiente supervisión"><span class="ui">✎</span><span class="ut">Notas</span></button>
     <button class="btn undo" id="undoBtn" type="button" hidden disabled aria-label="Deshacer"><span class="ui">↶</span><span class="ut">Deshacer</span></button>
     <button class="btn primary" id="saveBtn" type="button" hidden aria-label="Guardar en Odoo">Guardar</button>
   </header>
@@ -399,7 +402,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 73;
+  const APP_VERSION = 74;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js";
 
@@ -609,7 +612,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
     S.pages = S.doc.numPages; S.page = Math.min(page || 1, S.pages);
     $("empty").hidden = true; $("scroller").hidden = false; $("tray").hidden = false;
-    $("counts").hidden = false; $("saveBtn").hidden = false; $("undoBtn").hidden = false; $("backBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
+    $("counts").hidden = false; $("saveBtn").hidden = false; $("undoBtn").hidden = false; $("notasBtn").hidden = false; paintNotasBtn(); $("backBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
     await showPage(S.page, true);
     $("busy").hidden = true;
     refreshHeader(); dirty = false;
@@ -1059,6 +1062,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     $("drawCols").hidden = S.drawMode === "goma";
     toast(S.drawMode === "texto" ? "Toca el plano donde va el texto" : S.drawMode === "goma" ? "Pasa el dedo sobre lo que quieras borrar" : "Dibuja con un dedo. Con dos dedos mueves y haces zoom.");
   });
+  function paintNotasBtn() { $("notasBtn").classList.toggle("on", !!(S.meta.nota || "").trim()); }
+  // Notas para la siguiente supervisión: se guardan con el recorrido y le salen a quien abra esta etapa.
+  $("notasBtn").onclick = () => {
+    sheet(`<h2>Notas de esta etapa</h2>
+      <p class="note">Escribe detalles para revisar en la siguiente supervisión. Se suben con el recorrido y le salen a quien abra esta etapa.</p>
+      <div class="field"><textarea id="notaLibre" placeholder="Ej. falta confirmar con el electricista la caja de la recámara 2" style="min-height:130px">${esc(S.meta.nota || "")}</textarea></div>
+      <div class="row"><button type="button" class="btn" id="nlNo">Cerrar</button><button type="button" class="btn primary" id="nlOk">Guardar nota</button></div>`, () => {
+      $("nlNo").onclick = closeSheet;
+      $("nlOk").onclick = () => { S.meta.nota = $("notaLibre").value.trim(); dirty = true; paintNotasBtn(); closeSheet(); toast("Nota guardada. Se sube al guardar el recorrido."); };
+    });
+  };
   $("undoBtn").onclick = () => {
     const s = S.undo.pop(); if (!s) return;
     const o = JSON.parse(s); S.marks = o.marks; S.nextN = o.nextN; changed(); toast("Se deshizo el último cambio");
@@ -1802,7 +1816,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       return;
     }
     S.okSinRevisar = false;
-    if (!S.notaLista) {
+    if (!S.notaLista && !(S.meta.nota || "").trim()) {
       sheet(`<h2>¿Agregas una nota o comentario?</h2>
         <p class="note">Va en el PDF y en Odoo con el recorrido. Es opcional.</p>
         <div class="field"><textarea id="notaRec" placeholder="Ej. el electricista dejó cajas sin tapa en la recámara 2" style="min-height:110px">${esc(S.meta.nota || "")}</textarea></div>
@@ -2039,7 +2053,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const r = await ultimoDeOdoo(pl, h.odoo, base, "r" + pl.id + "e" + n); $("busy").hidden = true;
       // Recorridos de antes de las etapas (pasaron a Etapa 1): el azul "Cableado OK" cuenta como bien.
       if (r && r.marks) r.marks.forEach(m => { if (m.st === "azul") m.st = "verde"; });
-      return r ? { bytes: r.bytes, marks: r.marks, meta: { fecha: h.odoo.fecha || r.fecha, tecnico: h.odoo.tecnico || r.tecnico, obra: r.obra, etapa: n } } : null;
+      return r ? { bytes: r.bytes, marks: r.marks, meta: { fecha: h.odoo.fecha || r.fecha, tecnico: h.odoo.tecnico || r.tecnico, obra: r.obra, etapa: n, nota: h.odoo.nota || "" } } : null;
     };
     // Etapa que sigue: la última con recorrido (si ya quedó toda bien, la siguiente) o la que pusieron en Odoo.
     const hechas = ETAPAS.filter(e => ultimaDe(e.n)).map(e => e.n), ult = hechas.length ? Math.max(...hechas) : 0;
@@ -2066,11 +2080,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       const draft = dr && dr.bytes && dr.marks && dr.marks.some(isCircle) ? dr : null;
       // Misma etapa: se sigue en su plano. Si no hay, se parte de la etapa anterior más reciente (o del último recorrido en Odoo).
       let prev = null; const same = await conBytes(ultimaDe(n), n);
-      if (same) prev = { bytes: same.bytes, marks: same.marks, fecha: same.meta.fecha, tecnico: same.meta.tecnico, obra: same.meta.obra, etapa: n, donde: etapaTxt(n) };
+      if (same) prev = { bytes: same.bytes, marks: same.marks, fecha: same.meta.fecha, tecnico: same.meta.tecnico, obra: same.meta.obra, etapa: n, donde: etapaTxt(n), nota: same.meta.nota || "" };
       else {
         let low = null;
         for (let k = n - 1; k >= 1 && !low; k--) if (recs[k]) low = await conBytes(recs[k], k);
-        if (low) prev = { bytes: low.bytes, marks: low.marks, fecha: low.meta.fecha, tecnico: low.meta.tecnico, obra: low.meta.obra, etapa: low.meta.etapa, donde: etapaTxt(low.meta.etapa) };
+        if (low) prev = { bytes: low.bytes, marks: low.marks, fecha: low.meta.fecha, tecnico: low.meta.tecnico, obra: low.meta.obra, etapa: low.meta.etapa, donde: etapaTxt(low.meta.etapa), nota: low.meta.nota || "" };
         else if (pl.ultimo && pl.ultimo.url) {
           const r = await ultimoDeOdoo(pl, pl.ultimo, base); $("busy").hidden = true;
           if (r) prev = { ...r, fecha: pl.ultimo.fecha || r.fecha, tecnico: pl.ultimo.tecnico || r.tecnico, etapa: 0, donde: "último recorrido en Odoo" };
@@ -2083,12 +2097,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         const ms = JSON.parse(JSON.stringify(migrate(prev.marks, 2)));
         const otroDia = (prev.fecha || "") < today();
         startSession(new Uint8Array(prev.bytes), prev.etapa !== n || otroDia ? paraRevisar(ms, prev.fecha, prev.tecnico, prev.etapa, n) : ms,
-          { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: prev.etapa === n && !otroDia ? (same && same.meta.rid) || newId() : newId() }, 1, true);
+          { ...meta, obra: prev.obra || it.obra, tecnico: S.meta.tecnico || prev.tecnico, rid: prev.etapa === n && !otroDia ? (same && same.meta.rid) || newId() : newId(), nota: prev.etapa === n && !otroDia ? (prev.nota || "") : "" }, 1, true);
       };
       const nDraft = draft ? draft.marks.filter(isCircle).length : 0;
       sheet(`<h2>${esc(etapaTxt(n))}</h2><p class="note">${esc(it.obra)} · ${esc(pl.tipo)}</p>
         ${draft ? `<p class="note">Tienes esta etapa <b>sin guardar</b> en este equipo (${nDraft} salida${nDraft === 1 ? "" : "s"}).</p>` : ""}
         ${prev ? `<p class="note">${prev.etapa === n ? "Último recorrido de esta etapa" : "Se parte de"}: <b>${esc(prev.donde)}</b> · ${prev.fecha ? fmtFecha(prev.fecha) : ""}${prev.tecnico ? " · " + esc(prev.tecnico) : ""}${prev.etapa !== n ? ". Las salidas salen en gris para que las revises en esta etapa." : ""}</p>` : ""}
+        ${prev && prev.nota ? `<div class="notaPrev"><b>Nota de la visita anterior${prev.tecnico ? " (" + esc(prev.tecnico) + ")" : ""}:</b><br>${esc(prev.nota).replace(/\n/g, "<br>")}</div>` : ""}
         <div class="stack">
           ${draft ? `<button type="button" class="btn primary" id="plDraft">Seguir donde me quedé</button>` : ""}
           ${prev ? `<button type="button" class="btn${draft ? "" : " primary"}" id="plPrev">${prev.etapa === n ? "Seguir con esta etapa" : "Empezar con esas salidas"}</button>` : ""}
