@@ -325,6 +325,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <span class="c-porrev" id="nPx" hidden><i class="dot" style="border-style:dashed"></i><b id="nP">0</b></span>
     </div>
     <button class="pendpill" id="pendPill" type="button" hidden></button>
+    <button class="btn undo" id="compBtn" type="button" hidden aria-label="Compartir plano en PDF"><span class="ui"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg></span><span class="ut">Compartir</span></button>
     <button class="btn undo" id="notasBtn" type="button" hidden aria-label="Notas para la siguiente supervisión"><span class="ui">✎</span><span class="ut">Notas</span></button>
     <button class="btn undo" id="undoBtn" type="button" hidden disabled aria-label="Deshacer"><span class="ui">↶</span><span class="ut">Deshacer</span></button>
     <button class="btn primary" id="saveBtn" type="button" hidden aria-label="Guardar en Odoo">Guardar</button>
@@ -405,7 +406,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 (() => {
   "use strict";
-  const APP_VERSION = 74;
+  const APP_VERSION = 75;
   const $ = id => document.getElementById(id);
   pdfjsLib.GlobalWorkerOptions.workerSrc = "../app/lib/pdf.worker.min.js";
 
@@ -615,7 +616,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     S.doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
     S.pages = S.doc.numPages; S.page = Math.min(page || 1, S.pages);
     $("empty").hidden = true; $("scroller").hidden = false; $("tray").hidden = false;
-    $("counts").hidden = false; $("saveBtn").hidden = false; $("undoBtn").hidden = false; $("notasBtn").hidden = false; paintNotasBtn(); $("backBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
+    $("counts").hidden = false; $("saveBtn").hidden = false; $("undoBtn").hidden = false; $("notasBtn").hidden = false; $("compBtn").hidden = false; paintNotasBtn(); $("backBtn").hidden = false; $("zoomBox").hidden = false; $("pager").hidden = S.pages < 2;
     await showPage(S.page, true);
     $("busy").hidden = true;
     refreshHeader(); dirty = false;
@@ -1065,6 +1066,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     $("drawCols").hidden = S.drawMode === "goma";
     toast(S.drawMode === "texto" ? "Toca el plano donde va el texto" : S.drawMode === "goma" ? "Pasa el dedo sobre lo que quieras borrar" : "Dibuja con un dedo. Con dos dedos mueves y haces zoom.");
   });
+  // Compartir el plano en PDF tal como está ahora (con marcas y fotos), sin subirlo a Odoo: WhatsApp, correo, AirDrop…
+  $("compBtn").onclick = async () => {
+    const b = $("compBtn"); b.disabled = true; toast("Preparando el PDF…");
+    try {
+      const file = await makeFile();
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: file.name }); }
+        catch (e) { if (e && e.name === "AbortError") return; downloadFile(file); toast("Se descargó el PDF"); }
+      } else { downloadFile(file); toast("Se descargó el PDF"); }
+    } catch (e) { toast("No se pudo generar el PDF. Intenta de nuevo."); }
+    finally { b.disabled = false; }
+  };
   function paintNotasBtn() { $("notasBtn").classList.toggle("on", !!(S.meta.nota || "").trim()); }
   // Notas para la siguiente supervisión: se guardan con el recorrido y le salen a quien abra esta etapa.
   $("notasBtn").onclick = () => {
